@@ -115,10 +115,15 @@ def explicar_erro(enunciado, alternativa_correta, alternativa_marcada, acertou=F
                 stream_iter = info["llm"].stream(messages)
                 first_chunk = next(stream_iter)
                 def generator():
-                    yield first_chunk.content if hasattr(first_chunk, "content") else first_chunk
-                    for chunk in stream_iter:
-                        yield chunk.content if hasattr(chunk, "content") else chunk
-                    yield f"\n\n*(Respondido por: {info['name']})*"
+                    try:
+                        c = first_chunk.content if hasattr(first_chunk, "content") else first_chunk
+                        if c is not None: yield str(c)
+                        for chunk in stream_iter:
+                            c = chunk.content if hasattr(chunk, "content") else chunk
+                            if c is not None: yield str(c)
+                        yield f"\n\n*(Respondido por: {info['name']})*"
+                    except Exception as e:
+                        yield f"\n\n*(Erro durante a resposta da API: {str(e)})*"
                 return generator()
             else:
                 return info["llm"].invoke(messages).content + f"\n\n*(Respondido por: {info['name']})*"
@@ -134,9 +139,14 @@ def explicar_erro(enunciado, alternativa_correta, alternativa_marcada, acertou=F
             stream_iter_local = llm_local.stream(prompt_str)
             first_chunk_local = next(stream_iter_local)
             def generator_local():
-                yield first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
-                for chunk in stream_iter_local:
-                    yield chunk.content if hasattr(chunk, "content") else chunk
+                try:
+                    c = first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
+                    if c is not None: yield str(c)
+                    for chunk in stream_iter_local:
+                        c = chunk.content if hasattr(chunk, "content") else chunk
+                        if c is not None: yield str(c)
+                except Exception as e:
+                    yield f"\n\n*(Erro local: {str(e)})*"
             return generator_local()
         return llm_local.invoke(prompt_str)
     except Exception as e2:
@@ -254,10 +264,15 @@ def mentoria_ia(enunciado, alternativas, letra_escolhida=None, historico=None, s
                 stream_iter = info["llm"].stream(messages)
                 first_chunk = next(stream_iter)
                 def generator():
-                    yield first_chunk.content if hasattr(first_chunk, "content") else first_chunk
-                    for chunk in stream_iter:
-                        yield chunk.content if hasattr(chunk, "content") else chunk
-                    yield f"\n\n*(Respondido por: {info['name']})*"
+                    try:
+                        c = first_chunk.content if hasattr(first_chunk, "content") else first_chunk
+                        if c is not None: yield str(c)
+                        for chunk in stream_iter:
+                            c = chunk.content if hasattr(chunk, "content") else chunk
+                            if c is not None: yield str(c)
+                        yield f"\n\n*(Respondido por: {info['name']})*"
+                    except Exception as e:
+                        yield f"\n\n*(Erro na Mentoria: {str(e)})*"
                 return generator()
             else:
                 return info["llm"].invoke(messages).content + f"\n\n*(Respondido por: {info['name']})*"
@@ -272,9 +287,14 @@ def mentoria_ia(enunciado, alternativas, letra_escolhida=None, historico=None, s
             stream_iter_local = llm_local.stream(prompt_str)
             first_chunk_local = next(stream_iter_local)
             def generator_local():
-                yield first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
-                for chunk in stream_iter_local:
-                    yield chunk.content if hasattr(chunk, "content") else chunk
+                try:
+                    c = first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
+                    if c is not None: yield str(c)
+                    for chunk in stream_iter_local:
+                        c = chunk.content if hasattr(chunk, "content") else chunk
+                        if c is not None: yield str(c)
+                except Exception as e:
+                    yield f"\n\n*(Erro local na Mentoria: {str(e)})*"
             return generator_local()
         return llm_local.invoke(prompt_str)
     except Exception as e2:
@@ -292,10 +312,15 @@ def conselho_tutor_ia(dados_estatisticos, erros_detalhados, stream=False):
                 stream_iter = info["llm"].stream(prompt)
                 first_chunk = next(stream_iter)
                 def generator():
-                    yield first_chunk.content if hasattr(first_chunk, "content") else first_chunk
-                    for chunk in stream_iter:
-                        yield chunk.content if hasattr(chunk, "content") else chunk
-                    yield f"\n\n*(Respondido por: {info['name']})*"
+                    try:
+                        c = first_chunk.content if hasattr(first_chunk, "content") else first_chunk
+                        if c is not None: yield str(c)
+                        for chunk in stream_iter:
+                            c = chunk.content if hasattr(chunk, "content") else chunk
+                            if c is not None: yield str(c)
+                        yield f"\n\n*(Respondido por: {info['name']})*"
+                    except Exception as e:
+                        yield f"\n\n*(Erro no Conselho: {str(e)})*"
                 return generator()
             else:
                 return info["llm"].invoke(prompt).content + f"\n\n*(Respondido por: {info['name']})*"
@@ -309,10 +334,15 @@ def conselho_tutor_ia(dados_estatisticos, erros_detalhados, stream=False):
             stream_iter_local = llm_local.stream(prompt)
             first_chunk_local = next(stream_iter_local)
             def generator_local():
-                yield first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
-                for chunk in stream_iter_local:
-                    yield chunk.content if hasattr(chunk, "content") else chunk
-                yield "\n\n*(Respondido por: Qwen Local)*"
+                try:
+                    c = first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
+                    if c is not None: yield str(c)
+                    for chunk in stream_iter_local:
+                        c = chunk.content if hasattr(chunk, "content") else chunk
+                        if c is not None: yield str(c)
+                    yield "\n\n*(Respondido por: Qwen Local)*"
+                except Exception as e:
+                    yield f"\n\n*(Erro no Conselho Local: {str(e)})*"
             return generator_local()
         return llm_local.invoke(prompt) + "\n\n*(Respondido por: Qwen Local)*"
     except Exception as e2:
