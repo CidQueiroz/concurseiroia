@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+streamlit
+pandas
+python-dotenv
+langchain
+langchain-community
+langchain-groq
+langchain-openai
+langchain-ollama
+langchain-google-genai
+chromadb
+sentence-transformers

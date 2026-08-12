@@ -1,0 +1,656 @@
+{
+  "conteudo": [
+    {
+      "codigo": "1",
+      "grupo": "LÍNGUA PORTUGUESA",
+      "subgrupos": [
+        {
+          "codigo": "1.1",
+          "subgrupo": "Compreensão e interpretação de textos de gêneros variados"
+        },
+        {
+          "codigo": "1.2",
+          "subgrupo": "Reconhecimento de tipos e gêneros textuais"
+        },
+        {
+          "codigo": "1.3",
+          "subgrupo": "Domínio da ortografia oficial"
+        },
+        {
+          "codigo": "1.4",
+          "subgrupo": "Domínio dos mecanismos de coesão textual"
+        },
+        {
+          "codigo": "1.4.1",
+          "subgrupo": "Emprego de elementos de referenciação, substituição e repetição, de conectores e de outros elementos de sequenciação textual"
+        },
+        {
+          "codigo": "1.4.2",
+          "subgrupo": "Emprego de tempos e modos verbais"
+        },
+        {
+          "codigo": "1.5",
+          "subgrupo": "Domínio da estrutura morfossintática do período"
+        },
+        {
+          "codigo": "1.5.1",
+          "subgrupo": "Emprego das classes de palavras"
+        },
+        {
+          "codigo": "1.5.2",
+          "subgrupo": "Relações de coordenação entre orações e entre termos da oração"
+        },
+        {
+          "codigo": "1.5.3",
+          "subgrupo": "Relações de subordinação entre orações e entre termos da oração"
+        },
+        {
+          "codigo": "1.5.4",
+          "subgrupo": "Emprego dos sinais de pontuação"
+        },
+        {
+          "codigo": "1.5.5",
+          "subgrupo": "Concordância verbal e nominal"
+        },
+        {
+          "codigo": "1.5.6",
+          "subgrupo": "Regência verbal e nominal"
+        },
+        {
+          "codigo": "1.5.7",
+          "subgrupo": "Emprego do sinal indicativo de crase"
+        },
+        {
+          "codigo": "1.5.8",
+          "subgrupo": "Colocação dos pronomes átonos"
+        },
+        {
+          "codigo": "1.6",
+          "subgrupo": "Reescrita de frases e parágrafos do texto"
+        },
+        {
+          "codigo": "1.6.1",
+          "subgrupo": "Significação das palavras"
+        },
+        {
+          "codigo": "1.6.2",
+          "subgrupo": "Substituição de palavras ou de trechos de texto"
+        },
+        {
+          "codigo": "1.6.3",
+          "subgrupo": "Reorganização da estrutura de orações e de períodos do texto"
+        },
+        {
+          "codigo": "1.6.4",
+          "subgrupo": "Reescrita de textos de diferentes gêneros e níveis de formalidade"
+        }
+      ]
+    },
+    {
+      "codigo": "2",
+      "grupo": "LÍNGUA INGLESA",
+      "subgrupos": [
+        {
+          "codigo": "2.1",
+          "subgrupo": "Compreensão de textos em língua inglesa e itens gramaticais relevantes para o entendimento dos sentidos dos textos"
+        }
+      ]
+    },
+    {
+      "codigo": "3",
+      "grupo": "RACIOCÍNIO LÓGICO",
+      "subgrupos": [
+        {
+          "codigo": "3.1",
+          "subgrupo": "Estruturas lógicas"
+        },
+        {
+          "codigo": "3.2",
+          "subgrupo": "Lógica de argumentação: analogias, inferências, deduções e conclusões"
+        },
+        {
+          "codigo": "3.3",
+          "subgrupo": "Lógica sentencial (ou proposicional)"
+        },
+        {
+          "codigo": "3.3.1",
+          "subgrupo": "Proposições simples e compostas"
+        },
+        {
+          "codigo": "3.3.2",
+          "subgrupo": "Tabelas-verdade"
+        },
+        {
+          "codigo": "3.3.3",
+          "subgrupo": "Equivalências"
+        },
+        {
+          "codigo": "3.3.4",
+          "subgrupo": "Diagramas lógicos"
+        },
+        {
+          "codigo": "3.4",
+          "subgrupo": "Lógica de primeira ordem"
+        },
+        {
+          "codigo": "3.5",
+          "subgrupo": "Raciocínio lógico envolvendo problemas aritméticos, geométricos e matriciais"
+        }
+      ]
+    },
+    {
+      "codigo": "4",
+      "grupo": "ATUALIDADES E INTELIGÊNCIA ARTIFICIAL",
+      "subgrupos": [
+        {
+          "codigo": "4.1",
+          "subgrupo": "Tópicos relevantes e atuais de diversas áreas, tais como segurança, transportes, política, economia, sociedade, educação, saúde, cultura, tecnologia, energia, relações internacionais, desenvolvimento sustentável e ecologia"
+        },
+        {
+          "codigo": "4.2",
+          "subgrupo": "Inteligência Artificial: fundamentos e aplicações: conceitos de inteligência artificial; aprendizado da máquina; introdução aos modelos generativos e modelos de linguagem; ética, governança e privacidade em IA"
+        }
+      ]
+    },
+    {
+      "codigo": "5",
+      "grupo": "LEGISLAÇÃO ACERCA DE SEGURANÇA DA INFORMAÇÃO E PROTEÇÃO DE DADOS",
+      "subgrupos": [
+        {
+          "codigo": "5.1",
+          "subgrupo": "Lei nº 12.527/2011 (Lei de Acesso à Informação): capítulos I, II, III, IV e V; Dec. nº 7.724 e nº 7845"
+        },
+        {
+          "codigo": "5.2",
+          "subgrupo": "Lei nº 12.737/2012 (Lei de Delitos Informáticos): art. 2º"
+        },
+        {
+          "codigo": "5.3",
+          "subgrupo": "Lei nº 12.965/2014 (Marco Civil da Internet): capítulos II, Seção I, e III, Seções I e II"
+        },
+        {
+          "codigo": "5.4",
+          "subgrupo": "Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais – LGPD): capítulos I, II, III, IV, VII, VIII e IX"
+        }
+      ]
+    },
+    {
+      "codigo": "6",
+      "grupo": "REDES DE COMPUTADORES",
+      "subgrupos": [
+        {
+          "codigo": "6.1",
+          "subgrupo": "Conceitos de redes de computadores: meios de transmissão, classificação, topologia de redes, redes de longa distância, redes locais e redes sem fio"
+        },
+        {
+          "codigo": "6.2",
+          "subgrupo": "Elementos de interconexão de redes de computadores (hubs repetidores, switches, roteadores). VLANs. Cabeamento estruturado"
+        },
+        {
+          "codigo": "6.3",
+          "subgrupo": "Noções dos modelos de referência OSI (Open System Interconnection Reference Model)"
+        },
+        {
+          "codigo": "6.4",
+          "subgrupo": "Noções dos padrões IEEE 802.1, IEEE 802.3, IEEE 802.11 a/b/g/n/ac"
+        },
+        {
+          "codigo": "6.5",
+          "subgrupo": "Arquitetura e pilhas de protocolos TCP/IP: camada de rede (IPv4, IPv6 e IPsec), conceitos básicos de endereçamento e roteamento; camada de transporte (TCP e UDP); camada de aplicação (FTP, SSH, DNS, SMTP, POP, IMAP, HTTP, HTTPS, SSL, DNS, RDP, DHCP). Sistemas de nomes"
+        }
+      ]
+    },
+    {
+      "codigo": "7",
+      "grupo": "BANCO DE DADOS",
+      "subgrupos": [
+        {
+          "codigo": "7.1",
+          "subgrupo": "Banco de dados"
+        },
+        {
+          "codigo": "7.2",
+          "subgrupo": "Conceitos básicos"
+        },
+        {
+          "codigo": "7.3",
+          "subgrupo": "Arquitetura"
+        },
+        {
+          "codigo": "7.4",
+          "subgrupo": "Estrutura de dados"
+        },
+        {
+          "codigo": "7.5",
+          "subgrupo": "Modelagem e normalização de dados"
+        },
+        {
+          "codigo": "7.6",
+          "subgrupo": "Noções de administração de dados e de banco de dados"
+        },
+        {
+          "codigo": "7.7",
+          "subgrupo": "SQL (ANSI)"
+        },
+        {
+          "codigo": "7.7.1",
+          "subgrupo": "Oracle 19C, MySql, Postgresql, MongoDB e MS-SQLSERVER 2019"
+        },
+        {
+          "codigo": "7.8",
+          "subgrupo": "Arquitetura e políticas de armazenamento, backup, restauração, segurança e monitoração de dados"
+        },
+        {
+          "codigo": "7.9",
+          "subgrupo": "Engenharia de dados – ingestão e armazenamento de grande quantidade de dados (Big Data)"
+        },
+        {
+          "codigo": "7.10",
+          "subgrupo": "Noções para Otimização de Performance em Larga Escala"
+        }
+      ]
+    },
+    {
+      "codigo": "8",
+      "grupo": "ARQUITETURA TECNOLÓGICA",
+      "subgrupos": [
+        {
+          "codigo": "8.1",
+          "subgrupo": "Ciclo de vida do software"
+        },
+        {
+          "codigo": "8.2",
+          "subgrupo": "Metodologias de desenvolvimento de software"
+        },
+        {
+          "codigo": "8.3",
+          "subgrupo": "Metodologias ágeis"
+        },
+        {
+          "codigo": "8.4",
+          "subgrupo": "Qualidade de software"
+        },
+        {
+          "codigo": "8.5",
+          "subgrupo": "Gestão de Configuração: Controle de versão, controle de mudança e integração contínua"
+        },
+        {
+          "codigo": "8.6",
+          "subgrupo": "Engenharia de requisitos"
+        },
+        {
+          "codigo": "8.7",
+          "subgrupo": "Técnicas de Elicitação de requisitos"
+        },
+        {
+          "codigo": "8.8",
+          "subgrupo": "Gerenciamento de requisitos"
+        },
+        {
+          "codigo": "8.9",
+          "subgrupo": "Especificação de requisitos"
+        },
+        {
+          "codigo": "8.10",
+          "subgrupo": "Técnicas de validação de requisitos"
+        },
+        {
+          "codigo": "8.11",
+          "subgrupo": "Prototipação"
+        },
+        {
+          "codigo": "8.12",
+          "subgrupo": "Engenharia de usabilidade"
+        },
+        {
+          "codigo": "8.13",
+          "subgrupo": "Análise de requisitos de usabilidade"
+        },
+        {
+          "codigo": "8.14",
+          "subgrupo": "Métodos para avaliação de usabilidade"
+        },
+        {
+          "codigo": "8.15",
+          "subgrupo": "Orientação a objetos: classes e objetos; relacionamentos; herança e polimorfismo; encapsulamento"
+        },
+        {
+          "codigo": "8.16",
+          "subgrupo": "SOLID"
+        },
+        {
+          "codigo": "8.17",
+          "subgrupo": "GRASP"
+        },
+        {
+          "codigo": "8.18",
+          "subgrupo": "TDD"
+        },
+        {
+          "codigo": "8.19",
+          "subgrupo": "BDD"
+        },
+        {
+          "codigo": "8.20",
+          "subgrupo": "Padrões de projeto"
+        },
+        {
+          "codigo": "8.21",
+          "subgrupo": "Análise e projeto orientados a objetos"
+        },
+        {
+          "codigo": "8.22",
+          "subgrupo": "UML: visão geral, modelos e diagramas"
+        },
+        {
+          "codigo": "8.23",
+          "subgrupo": "Interoperabilidade de sistemas e padrões de integração: APIs, Gateway de APIs e Web Services; padrões XML, JSON e REST"
+        },
+        {
+          "codigo": "8.24",
+          "subgrupo": "Engenharia de desempenho: técnicas de análise de desempenho; DEVSECOPS"
+        }
+      ]
+    },
+    {
+      "codigo": "9",
+      "grupo": "COMPUTAÇÃO EM NUVEM E VIRTUALIZAÇÃO",
+      "subgrupos": [
+        {
+          "codigo": "9.1",
+          "subgrupo": "Conceitos de computação em nuvem: conceitos básicos; tipologia (IaaS, PaaS, SaaS)"
+        },
+        {
+          "codigo": "9.2",
+          "subgrupo": "Modelo: privada, pública, híbrida"
+        },
+        {
+          "codigo": "9.3",
+          "subgrupo": "Benefícios, alta disponibilidade, escalabilidade, elasticidade, agilidade, recuperação de desastres"
+        },
+        {
+          "codigo": "9.4",
+          "subgrupo": "Componentes centrais da arquitetura em nuvem: distribuição geográfica, regiões, zonas de disponibilidade, subscrições, grupos de gestão, recursos"
+        },
+        {
+          "codigo": "9.5",
+          "subgrupo": "Características gerais de identidade, privacidade, conformidade e segurança na nuvem"
+        },
+        {
+          "codigo": "9.6",
+          "subgrupo": "Infrastructure as Code (IaC)"
+        },
+        {
+          "codigo": "9.7",
+          "subgrupo": "Automação"
+        },
+        {
+          "codigo": "9.8",
+          "subgrupo": "Red Hat Clair, Docker, Harbor, Kubernetes, VMware NSX, VMware vCenter Server VMware vCloud Director, VMware vRealize Automation, VMware vRealize Log Insight, VMware vRealize Operations, VMware vRealize Orchestrator"
+        }
+      ]
+    },
+    {
+      "codigo": "10",
+      "grupo": "LINGUAGEM DE PROGRAMAÇÃO, FRAMEWORKS E VERSIONAMENTO DE SOFTWARE",
+      "subgrupos": [
+        {
+          "codigo": "10.1",
+          "subgrupo": "Gitlab, HTML5, CSS3, Java e Javascript React.js; Java EE (EJB, JPA, JMS); Spring Boot; Spring Cloud; Confluent Kafka"
+        }
+      ]
+    },
+    {
+      "codigo": "11",
+      "grupo": "SEGURANÇA DA INFORMAÇÃO",
+      "subgrupos": [
+        {
+          "codigo": "11.1",
+          "subgrupo": "Políticas de segurança da informação"
+        },
+        {
+          "codigo": "11.2",
+          "subgrupo": "Procedimentos de segurança, conceitos gerais de gerenciamento"
+        },
+        {
+          "codigo": "11.3",
+          "subgrupo": "Segurança de redes de computadores, inclusive redes sem fio"
+        },
+        {
+          "codigo": "11.4",
+          "subgrupo": "Vulnerabilidades e ataques a sistemas computacionais"
+        },
+        {
+          "codigo": "11.5",
+          "subgrupo": "Criptografia"
+        },
+        {
+          "codigo": "11.6",
+          "subgrupo": "Proteção contra softwares maliciosos"
+        },
+        {
+          "codigo": "11.7",
+          "subgrupo": "Certificação digital"
+        },
+        {
+          "codigo": "11.8",
+          "subgrupo": "Conceitos básicos Lei nº 13.709/2018 e suas alterações (Lei Geral de Proteção de Dados Pessoais – LGPD)"
+        },
+        {
+          "codigo": "11.9",
+          "subgrupo": "Conceitos: IDS (Intrusion Detection System), IPS (Intrusion Prevention System), SIEM (Security Information and Event Management)"
+        },
+        {
+          "codigo": "11.10",
+          "subgrupo": "NIST Cybersecurity Framework version 1.1"
+        }
+      ]
+    },
+    {
+      "codigo": "12",
+      "grupo": "PLATAFORMA BÁSICA",
+      "subgrupos": [
+        {
+          "codigo": "12.1",
+          "subgrupo": "Arquitetura dos Computadores: Hardware: Conceitos e Funcionamento"
+        },
+        {
+          "codigo": "12.2",
+          "subgrupo": "Sistemas de Proteção de Dados: Backups: Conceitos, Fundamentos, Tipos e Políticas de Backup"
+        },
+        {
+          "codigo": "12.3",
+          "subgrupo": "Sistemas de Armazenamento de Dados: Storages Físicos, Virtualizados e Baseados em Software (storage de bloco, storage objeto, NAS, CIFS, NFS), Gestão e Segurança de Dados e LGPD"
+        },
+        {
+          "codigo": "12.4",
+          "subgrupo": "Arquitetura de Sistemas Operacionais: Processamento, uso de memória, acesso a discos e sistemas de arquivos (conceitos de inodes e blocos)"
+        },
+        {
+          "codigo": "12.5",
+          "subgrupo": "Monitoramento: Servidores Físicos e Virtuais, Aplicações"
+        }
+      ]
+    },
+    {
+      "codigo": "13",
+      "grupo": "AUTOMAÇÃO",
+      "subgrupos": [
+        {
+          "codigo": "13.1",
+          "subgrupo": "Infraestrutura como código e automação da infraestrutura de TI"
+        },
+        {
+          "codigo": "13.2",
+          "subgrupo": "Conceitos e princípios de DevOps e DevSecOps"
+        },
+        {
+          "codigo": "13.3",
+          "subgrupo": "Conceitos de computação na nuvem (Cloud Computing)"
+        },
+        {
+          "codigo": "13.4",
+          "subgrupo": "Ferramentas de infraestrutura ágil, automação, gerenciamento de configuração, integração contínua e entrega contínua (Puppet, Ansible, Gitlab, Jenkins e Rundeck)"
+        },
+        {
+          "codigo": "13.5",
+          "subgrupo": "Ferramentas de Gestão centralizada de Logs"
+        },
+        {
+          "codigo": "13.6",
+          "subgrupo": "Gerenciamento de configuração de servidores, provisionamento, orquestração e automação de infraestrutura de TI"
+        },
+        {
+          "codigo": "13.7",
+          "subgrupo": "Conceitos de Contêineres e Orquestração de Contêineres (Docker, Kubernetes, Rancher)"
+        },
+        {
+          "codigo": "13.8",
+          "subgrupo": "Fundamentos, operação e configuração de Sistemas Operacionais: Linux RedHat"
+        },
+        {
+          "codigo": "13.9",
+          "subgrupo": "Programação em linguagens: Shell Script (bash), Python, Ruby, Groovy e Javascript"
+        },
+        {
+          "codigo": "13.10",
+          "subgrupo": "Observabilidade, coleta e análise de logs e métricas"
+        }
+      ]
+    },
+    {
+      "codigo": "14",
+      "grupo": "FERRAMENTAS ANALYTICS",
+      "subgrupos": [
+        {
+          "codigo": "14.1",
+          "subgrupo": "Conceito de ETL (extração, transformação e carga de dados), Business Intelligence, Analytics, Big Data, Machine Learning, Inteligência Artificial"
+        },
+        {
+          "codigo": "14.2",
+          "subgrupo": "Conhecimento de Linguagens de Consulta"
+        },
+        {
+          "codigo": "14.3",
+          "subgrupo": "Bancos de Dados Distribuídos"
+        },
+        {
+          "codigo": "14.4",
+          "subgrupo": "Mineração de Dados"
+        },
+        {
+          "codigo": "14.5",
+          "subgrupo": "Administração das ferramentas: Sap Bods, Sas Miner, Sas 9.4, Sas Viya, Webfocus, HyperStage, Qlikview, Hadoop (HDP), Hadoop (CDP)"
+        },
+        {
+          "codigo": "14.6",
+          "subgrupo": "Conceitos do processo de MDM (master data management)"
+        },
+        {
+          "codigo": "14.7",
+          "subgrupo": "Administração das Ferramentas: EBX, Trillium, DMX"
+        },
+        {
+          "codigo": "14.8",
+          "subgrupo": "Conhecimento das Linguagens Python, R, SAS"
+        },
+        {
+          "codigo": "14.9",
+          "subgrupo": "Conhecimento HIVE, HBASE"
+        },
+        {
+          "codigo": "14.10",
+          "subgrupo": "Conhecimento das ferramentas de programação, Zeppelin, Sas Guide, Qlikview Designer, Dataservices"
+        }
+      ]
+    },
+    {
+      "codigo": "15",
+      "grupo": "PLATAFORMA BAIXA",
+      "subgrupos": [
+        {
+          "codigo": "15.1",
+          "subgrupo": "Sistemas Operacionais: Conceito de Processo. Gerência de Processos/Processador. Comunicação, Concorrência e Sincronização de Processos"
+        },
+        {
+          "codigo": "15.2",
+          "subgrupo": "Gerenciamento de Memória: Memória Virtual, Paginação, Segmentação e \"Swap\""
+        },
+        {
+          "codigo": "15.3",
+          "subgrupo": "Gerenciamento de Sistemas Arquivos"
+        },
+        {
+          "codigo": "15.4",
+          "subgrupo": "Gerenciamento de Dispositivos de Entrada/Saída"
+        },
+        {
+          "codigo": "15.5",
+          "subgrupo": "Sistemas operacionais Windows, Linux, Unix: instalação, operação, monitoração, administração e suporte (troubleshooting)"
+        },
+        {
+          "codigo": "15.6",
+          "subgrupo": "Serviços de gerenciamento de redes, pacotes, discos, LVM, servidor FTP, NFS (Network File System), Samba, OpenLDAP, Active Directory, SSH, Postfix"
+        },
+        {
+          "codigo": "15.7",
+          "subgrupo": "Virtualização: conceitos, operação e administração de VMware vSphere, vCenter, vCloud, vROPs, XEN, KVM; conceitos e implementação de alta disponibilidade e recuperação de desastre. Linguagens de script: Powershell, Shell Script"
+        },
+        {
+          "codigo": "15.8",
+          "subgrupo": "Conformidade e automação de TI: Puppet, Ansible"
+        }
+      ]
+    },
+    {
+      "codigo": "16",
+      "grupo": "APLICAÇÕES",
+      "subgrupos": [
+        {
+          "codigo": "16.1",
+          "subgrupo": "Desenvolvimento Java EE"
+        },
+        {
+          "codigo": "16.2",
+          "subgrupo": "Conceito de servidor de aplicação Container WEB e EJB"
+        },
+        {
+          "codigo": "16.3",
+          "subgrupo": "Padrões e antipadrões de projeto Java EE"
+        },
+        {
+          "codigo": "16.4",
+          "subgrupo": "Uso da linguagem Java"
+        },
+        {
+          "codigo": "16.5",
+          "subgrupo": "Software para versionamento e guarda de fontes"
+        },
+        {
+          "codigo": "16.6",
+          "subgrupo": "Arquitetura de aplicações: cliente/servidor, N camadas, arquitetura orientada a serviços (SOA), distribuída, peer to peer, barramento de mensagens"
+        },
+        {
+          "codigo": "16.7",
+          "subgrupo": "Conceitos de Arquitetura Monolítica e MicroServiços"
+        },
+        {
+          "codigo": "16.8",
+          "subgrupo": "Linguagens de Programação: Java, Python, Shell Script"
+        },
+        {
+          "codigo": "16.9",
+          "subgrupo": "Servidores de Aplicação: Jboss, Weblogic e framework Spring: operação, monitoração, administração, ajustes de desempenho"
+        },
+        {
+          "codigo": "16.10",
+          "subgrupo": "Máquinas virtuais Java: estrutura da JVM, heap memory, garbage collection e monitoramento (Jconsole, Jps e Jstack)"
+        },
+        {
+          "codigo": "16.11",
+          "subgrupo": "Servidores HTTP e proxy reverso: Apache, NGINX, Oracle HTTP Server"
+        }
+      ]
+    }
+  ]
+}

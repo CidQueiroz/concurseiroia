@@ -1,0 +1,153 @@
+Agora o cronograma
+
+Enquanto o Qwen está importando PDFs.
+
+✅ Etapa 1 (20 min)
+
+Finalizar o schema.
+
+Checklist
+□ grupos
+□ subgrupos
+□ questoes
+□ sessoes
+□ respostas
+
+✅ Etapa 2 (30 min)
+
+Criar o DAO.
+
+Arquivos
+database.py
+grupos.py
+subgrupos.py
+questoes.py
+respostas.py
+sessoes.py
+
+Cada arquivo só faz CRUD.
+
+Nada de lógica.
+
+✅ Etapa 3 (40 min)
+Modificar o importador.
+Fluxo
+
+PDF - Qwen - JSON - get_or_create_grupo() - get_or_create_subgrupo() - insert_questao()
+
+Depois disso o banco cresce sozinho.
+
+✅ Etapa 4 (20 min)
+
+Criar os arquivos markdown.
+
+conteudos/
+Arquitetura Tecnológica/
+Docker.md
+Kubernetes.md
+Terraform.md
+OCI.md
+
+Mesmo vazios.
+
+Só criar.
+
+Módulo Hoje
+
+Tela
+
+Grupos - Subgrupos - Conteúdo Markdown - Botão
+
+Resolver questões
+
+Checklist
+□ listar grupos
+□ listar subgrupos
+□ abrir markdown
+□ botão Resolver
+
+Modo prova
+
+Fluxo
+
+Grupo - Subgrupo - Quantidade - Resolver - Salvar respostas - Mostrar resultado - Explicação IA
+
+Checklist
+
+□ buscar questões
+□ renderizar
+□ salvar resposta
+□ salvar sessão
+□ calcular nota
+□ chamar IA
+
+Estatísticas
+
+Tela
+Questões
+Precisão
+Horas
+Sessões
+Depois
+
+Arquitetura
+91%
+
+clicou - Docker
+98%
+
+Kubernetes
+64%
+
+Terraform
+81%
+
+Checklist
+□ estatística geral
+□ estatística grupo
+□ estatística subgrupo
+□ ranking
+
+Conteúdo
+
+Quando abrir
+Docker
+e o markdown estiver vazio.
+Botão
+Gerar conteúdo
+Prompt
+Explique Docker para um concurso da FGV.
+
+Máximo
+
+1200 palavras.
+
+Inclua:
+- conceito
+- arquitetura
+- comandos importantes
+- diferenças
+- pegadinhas
+- resumo
+- 5 questões comentadas
+
+Formato Markdown.
+
+Salvar automaticamente
+
+conteudos/docker.md
+
+
+Teste completo
+
+Fluxo
+
+Hoje
+ - Docker
+ - Ler conteúdo
+ - Resolver 20 questões
+ - Receber explicação
+ - Atualizar estatísticas
+ - Fechar sessão
+
+Se isso funcionar, segunda-feira você já estuda exclusivamente pelo sistema.

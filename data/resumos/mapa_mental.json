@@ -1,0 +1,142 @@
+{
+  "conteudo": [
+    {
+      "grupo": "LÍNGUA PORTUGUESA",
+      "subgrupos": [
+        "Compreensão de textos",
+        "Mecanismos de coesão",
+        "Sintaxe do período",
+        "Reescrita de frases"
+      ]
+    },
+    {
+      "grupo": "LÍNGUA INGLESA",
+      "subgrupos": [
+        "Entendimento de textos e sentidos",
+        "Itens gramaticais relevantes"
+      ]
+    },
+    {
+      "grupo": "RACIOCÍNIO LÓGICO MATEMÁTICO",
+      "subgrupos": [
+        "Estruturas lógicas",
+        "Lógica de argumentação",
+        "Lógica sentencial (tabelas-verdade)",
+        "Problemas aritméticos/geométricos"
+      ]
+    },
+    {
+      "grupo": "ATUALIDADES E INTELIGÊNCIA ARTIFICIAL",
+      "subgrupos": [
+        "Tópicos atuais",
+        "Fundamentos de IA"
+      ]
+    },
+    {
+      "grupo": "LEGISLAÇÃO, SEGURANÇA E PROTEÇÃO DE DADOS",
+      "subgrupos": [
+        "LAI (12.527/11)",
+        "Delitos Informáticos (12.737/12)",
+        "Marco Civil da Internet (12.965/14)",
+        "LGPD (13.709/18)"
+      ]
+    },
+    {
+      "grupo": "REDES DE COMPUTADORES E PROTOCOLOS",
+      "subgrupos": [
+        "Modelos OSI e TCP/IP",
+        "Padrões IEEE 802",
+        "Roteamento",
+        "VLANs",
+        "Protocolos de aplicação (HTTP, SSH, DNS, etc.)"
+      ]
+    },
+    {
+      "grupo": "BANCO DE DADOS E BIG DATA",
+      "subgrupos": [
+        "Modelagem e normalização",
+        "SQL (Oracle, MySQL, Postgres, MongoDB)",
+        "Engenharia de dados em larga escala"
+      ]
+    },
+    {
+      "grupo": "ARQUITETURA TECNOLÓGICA E ENGENHARIA",
+      "subgrupos": [
+        "Ciclo de vida de software",
+        "Metodologias ágeis",
+        "SOLID",
+        "Padrões de Projeto",
+        "UML",
+        "Interoperabilidade (APIs, REST)"
+      ]
+    },
+    {
+      "grupo": "COMPUTAÇÃO EM NUVEM E VIRTUALIZAÇÃO",
+      "subgrupos": [
+        "Modelos IaaS, PaaS, SaaS",
+        "Nuvens públicas/híbridas",
+        "Soluções AWS, Azure e Google Cloud",
+        "OCI"
+      ]
+    },
+    {
+      "grupo": "AUTOMAÇÃO E DEVOPS (Infraestrutura Ágil)",
+      "subgrupos": [
+        "Infraestrutura como código (IaC)",
+        "Ansible, Puppet, Jenkins",
+        "Docker",
+        "Kubernetes"
+      ]
+    },
+    {
+      "grupo": "SEGURANÇA DA INFORMAÇÃO E CIBERSEGURANÇA",
+      "subgrupos": [
+        "Criptografia",
+        "NIST Framework",
+        "Sistemas IDS/IPS",
+        "SIEM",
+        "Políticas de proteção contra malware"
+      ]
+    },
+    {
+      "grupo": "PLATAFORMAS E LINGUAGENS DE PROGRAMAÇÃO",
+      "subgrupos": [
+        "Administração de SO (Linux/Windows)",
+        "Linguagem Java",
+        "Linguagem Python",
+        "Spring Boot",
+        "Versionamento com GitLab",
+        "Kafka"
+      ]
+    },
+    {
+      "grupo": "FERRAMENTAS ANALYTICS E BI",
+      "subgrupos": [
+        "Conceitos de ETL",
+        "Data Mining",
+        "Machine Learning",
+        "Administração de ferramentas (SAS, Hadoop, Qlikview)"
+      ]
+    },
+    {
+      "grupo": "SUSTENTAÇÃO DE APLICAÇÕES E SERVIDORES",
+      "subgrupos": [
+        "Servidores de aplicação (JBoss, Weblogic)",
+        "Servidores HTTP (Nginx, Apache)",
+        "Monitoramento de performance (JVM)"
+      ]
+    },
+    {
+      "grupo": "FORA DO EDITAL",
+      "subgrupos": [
+        "Fora do Edital"
+      ]
+    },
+    {
+      "grupo": "Não Classificado",
+      "subgrupos": [
+        "Não Classificado"
+      ]
+    }
+  ]
+}

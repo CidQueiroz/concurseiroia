@@ -1,0 +1,24 @@
+[ASSUNTO] Computação em Nuvem e Automação
+[BANCA] FGV
+[ANO] 2024
+[DIFICULDADE] Alta
+[ENUNCIADO] No contexto de Kubernetes, um Pod é definido como:
+[A] Um nó físico do cluster.
+[B] Um serviço de balanceamento de carga.
+[C] A menor unidade de computação implantável que pode ser criada e gerenciada.
+[D] Um volume de armazenamento persistente.
+[E] Uma imagem de contêiner armazenada no registry.
+[GABARITO] C
+---
+[ASSUNTO] Redes de Computadores
+[BANCA] FGV
+[ANO] 2023
+[DIFICULDADE] Média
+[ENUNCIADO] Qual protocolo da camada de transporte garante a entrega ordenada dos pacotes?
+[A] UDP
+[B] IP
+[C] ICMP
+[D] TCP
+[E] ARP
+[GABARITO] D
+---

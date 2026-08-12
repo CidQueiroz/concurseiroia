@@ -1,0 +1,319 @@
+import os
+import json
+import time
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
+from langchain_ollama import OllamaLLM
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+try:
+    import streamlit as st
+    HAS_STREAMLIT = True
+except ImportError:
+    HAS_STREAMLIT = False
+
+load_dotenv()
+
+def get_llm_pool(temperature=0.1, json_mode=False, prefer_gemini=False):
+    groq_pool = []
+    gemini_pool = []
+    openrouter_pool = []
+    
+    user_groq_key = st.session_state.get("user_groq_key") if HAS_STREAMLIT and hasattr(st, "session_state") else None
+    user_gemini_key = st.session_state.get("user_gemini_key") if HAS_STREAMLIT and hasattr(st, "session_state") else None
+    
+    # 1. Chave Principal do App (Groq)
+    k_main = user_groq_key if user_groq_key else os.getenv("GROQ_API_KEY")
+    if k_main:
+        kwargs = {"model_name": "llama-3.3-70b-versatile", "temperature": temperature, "api_key": k_main}
+        if json_mode:
+            kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
+        groq_pool.append({
+            "name": "Groq Principal (BYOK)" if user_groq_key else "Groq Principal",
+            "llm": ChatGroq(**kwargs)
+        })
+        
+    # 2. Gemini Fallbacks
+    if user_gemini_key:
+        gemini_pool.append({
+            "name": "Gemini (BYOK)",
+            "llm": ChatGoogleGenerativeAI(
+                model="gemini-3.5-flash", 
+                temperature=temperature, 
+                google_api_key=user_gemini_key,
+                max_retries=1
+            )
+        })
+    else:
+        for i in ["1", "2", "3", "4", "5", "6", "7", "8"]:
+            k = os.getenv(f"GEMINI_API_KEY{i}")
+            if k:
+                gemini_pool.append({
+                    "name": f"Gemini (Chave {i if i else 'Base'})",
+                    "llm": ChatGoogleGenerativeAI(
+                        model="gemini-3.5-flash", 
+                        temperature=temperature, 
+                        google_api_key=k,
+                        max_retries=1
+                    )
+                })
+        
+    # 3. OpenRouter Fallbacks (Gemini Free e Llama Free)
+    modelos_or = [
+        "google/gemini-2.0-flash-exp:free",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "nvidia/llama-3.1-nemotron-70b-instruct:free",
+        "qwen/qwen-2.5-72b-instruct:free",
+        "deepseek/deepseek-r1-distill-llama-70b:free"
+    ]
+    for i in range(1, 10):
+        k = os.getenv(f"OPENROUTER_API_KEY{i}")
+        if k:
+            for m in modelos_or:
+                openrouter_pool.append({
+                    "name": f"OpenRouter ({m})",
+                    "llm": ChatOpenAI(
+                        base_url="https://openrouter.ai/api/v1",
+                        api_key=k,
+                        model=m,
+                        temperature=temperature
+                    )
+                })
+                
+    if prefer_gemini:
+        return gemini_pool + groq_pool + openrouter_pool
+    return groq_pool + gemini_pool + openrouter_pool
+
+def explicar_erro(enunciado, alternativa_correta, alternativa_marcada, acertou=False, historico=None, stream=False):
+    if historico is None:
+        historico = []
+    if acertou:
+        from backend.prompts.tutor import get_prompt_explicar_acerto
+        sys_prompt = get_prompt_explicar_acerto(enunciado, alternativa_correta)
+    else:
+        from backend.prompts.tutor import get_prompt_explicar_erro
+        sys_prompt = get_prompt_explicar_erro(enunciado, alternativa_correta, alternativa_marcada)
+        
+    from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+    messages = [SystemMessage(content=sys_prompt)]
+    
+    if not historico:
+        messages.append(HumanMessage(content="Analise a questão e explique a resposta conforme suas instruções."))
+        
+    for msg in historico:
+        if msg["role"] == "user":
+            messages.append(HumanMessage(content=msg["content"]))
+        else:
+            messages.append(AIMessage(content=msg["content"]))
+            
+    pool = get_llm_pool(temperature=0.1, prefer_gemini=True)
+    
+    for info in pool:
+        try:
+            if stream:
+                stream_iter = info["llm"].stream(messages)
+                first_chunk = next(stream_iter)
+                def generator():
+                    yield first_chunk.content if hasattr(first_chunk, "content") else first_chunk
+                    for chunk in stream_iter:
+                        yield chunk.content if hasattr(chunk, "content") else chunk
+                    yield f"\n\n*(Respondido por: {info['name']})*"
+                return generator()
+            else:
+                return info["llm"].invoke(messages).content + f"\n\n*(Respondido por: {info['name']})*"
+        except Exception as e:
+            print(f"[!] {info['name']} falhou na explicação. Erro: {e}")
+            continue
+            
+    print("Todas as chaves da nuvem falharam (Explicar Erro). Usando fallback Qwen Local...")
+    try:
+        prompt_str = "\n".join([f"{m.type.upper()}: {m.content}" for m in messages])
+        llm_local = OllamaLLM(model="qwen2.5:3b", temperature=0.1)
+        if stream:
+            stream_iter_local = llm_local.stream(prompt_str)
+            first_chunk_local = next(stream_iter_local)
+            def generator_local():
+                yield first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
+                for chunk in stream_iter_local:
+                    yield chunk.content if hasattr(chunk, "content") else chunk
+            return generator_local()
+        return llm_local.invoke(prompt_str)
+    except Exception as e2:
+        return f"Falha geral ao gerar análise. Erro Local: {e2}"
+
+def gerar_conteudo_estudo(grupo, subgrupo):
+    from backend.prompts.tutor import get_prompt_estudo
+    prompt = get_prompt_estudo(grupo, subgrupo)
+    
+    pool = get_llm_pool(temperature=0.5)
+    
+    for info in pool:
+        try:
+            return info["llm"].invoke(prompt).content
+        except Exception as e:
+            print(f"[!] {info['name']} falhou no resumo. Tentando fallback...")
+            continue
+            
+    print("Todas as chaves da nuvem falharam (Resumo). Usando fallback Qwen Local...")
+    try:
+        llm_local = OllamaLLM(model="qwen2.5:3b", temperature=0.5)
+        return llm_local.invoke(prompt)
+    except Exception as e2:
+        return f"Erro ao gerar conteúdo via Nuvem e Local ({e2})"
+
+def gerar_questao_inedita(grupo, subgrupo):
+    from backend.prompts.tutor import get_prompt_gerar_questao
+    prompt = get_prompt_gerar_questao(grupo, subgrupo)
+    
+    pool = get_llm_pool(temperature=0.7, json_mode=True)
+    
+    for info in pool:
+        try:
+            resposta = info["llm"].invoke(prompt).content
+            import re
+            texto_limpo = resposta.strip()
+            if texto_limpo.startswith("```json"): texto_limpo = texto_limpo[7:]
+            elif texto_limpo.startswith("```"): texto_limpo = texto_limpo[3:]
+            if texto_limpo.endswith("```"): texto_limpo = texto_limpo[:-3]
+            texto_limpo = texto_limpo.strip()
+            match = re.search(r'\[.*\]|\{.*\}', texto_limpo, re.DOTALL)
+            if match: texto_limpo = match.group(0)
+            return json.loads(texto_limpo)
+        except Exception as e:
+            print(f"[!] {info['name']} falhou na geração de questão. Tentando fallback...")
+            continue
+            
+    print("Todas as chaves da nuvem falharam (Questão Inédita). Usando fallback Qwen Local...")
+    try:
+        llm_local = OllamaLLM(model="qwen2.5:3b", temperature=0.7, format="json", num_predict=2048)
+        resposta = llm_local.invoke(prompt)
+        import re
+        texto_limpo = resposta.strip()
+        if texto_limpo.startswith("```json"): texto_limpo = texto_limpo[7:]
+        elif texto_limpo.startswith("```"): texto_limpo = texto_limpo[3:]
+        if texto_limpo.endswith("```"): texto_limpo = texto_limpo[:-3]
+        texto_limpo = texto_limpo.strip()
+        match = re.search(r'\[.*\]|\{.*\}', texto_limpo, re.DOTALL)
+        if match: texto_limpo = match.group(0)
+        return json.loads(texto_limpo)
+    except Exception as e2:
+        print(f"Erro no fallback local Qwen: {e2}")
+        return None
+
+def resolver_gabarito_ia(enunciado, alternativas):
+    prompt = f"Você é um especialista em concursos de TI.\nResolva a questão abaixo e retorne APENAS A LETRA da alternativa correta (A, B, C, D ou E).\nNÃO retorne mais nada além da letra.\n\n[QUESTÃO]\n{enunciado}\n\n[ALTERNATIVAS]\n"
+    for k, v in alternativas.items():
+        prompt += f"{k}) {v}\n"
+        
+    pool = get_llm_pool(temperature=0.0)
+    
+    for info in pool:
+        try:
+            resp = info["llm"].invoke(prompt).content.strip().upper()
+            import re
+            match = re.search(r'\b([A-E])\b', resp)
+            if match:
+                return match.group(1)
+        except Exception as e:
+            continue
+            
+    try:
+        llm_local = OllamaLLM(model="qwen2.5:3b", temperature=0.0)
+        resp = llm_local.invoke(prompt).strip().upper()
+        match = re.search(r'\b([A-E])\b', resp)
+        if match:
+            return match.group(1)
+    except:
+        pass
+    return "A"  # Fallback seguro
+
+def mentoria_ia(enunciado, alternativas, letra_escolhida=None, historico=None, stream=False):
+    if historico is None:
+        historico = []
+    from backend.prompts.tutor import get_prompt_mentoria
+    sys_prompt = get_prompt_mentoria(enunciado, alternativas, letra_escolhida)
+    
+    from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+    messages = [SystemMessage(content=sys_prompt)]
+    
+    if not historico:
+        messages.append(HumanMessage(content="Por favor, me guie e explique a questão de forma socrática, não me dê a resposta final."))
+        
+    for msg in historico:
+        if msg["role"] == "user":
+            messages.append(HumanMessage(content=msg["content"]))
+        else:
+            messages.append(AIMessage(content=msg["content"]))
+    
+    pool = get_llm_pool(temperature=0.3, prefer_gemini=True)
+    
+    for info in pool:
+        try:
+            if stream:
+                stream_iter = info["llm"].stream(messages)
+                first_chunk = next(stream_iter)
+                def generator():
+                    yield first_chunk.content if hasattr(first_chunk, "content") else first_chunk
+                    for chunk in stream_iter:
+                        yield chunk.content if hasattr(chunk, "content") else chunk
+                    yield f"\n\n*(Respondido por: {info['name']})*"
+                return generator()
+            else:
+                return info["llm"].invoke(messages).content + f"\n\n*(Respondido por: {info['name']})*"
+        except Exception as e:
+            print(f"[!] {info['name']} falhou na mentoria. Erro: {e}")
+            continue
+            
+    try:
+        prompt_str = "\n".join([f"{m.type.upper()}: {m.content}" for m in messages])
+        llm_local = OllamaLLM(model="qwen2.5:3b", temperature=0.3)
+        if stream:
+            stream_iter_local = llm_local.stream(prompt_str)
+            first_chunk_local = next(stream_iter_local)
+            def generator_local():
+                yield first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
+                for chunk in stream_iter_local:
+                    yield chunk.content if hasattr(chunk, "content") else chunk
+            return generator_local()
+        return llm_local.invoke(prompt_str)
+    except Exception as e2:
+        return f"Falha ao acionar a Mentoria. Erro Local: {e2}"
+
+def conselho_tutor_ia(dados_estatisticos, erros_detalhados, stream=False):
+    from backend.prompts.tutor import get_prompt_conselho_tutor
+    prompt = get_prompt_conselho_tutor(dados_estatisticos, erros_detalhados)
+    
+    pool = get_llm_pool(temperature=0.3)
+    
+    for info in pool:
+        try:
+            if stream:
+                stream_iter = info["llm"].stream(prompt)
+                first_chunk = next(stream_iter)
+                def generator():
+                    yield first_chunk.content if hasattr(first_chunk, "content") else first_chunk
+                    for chunk in stream_iter:
+                        yield chunk.content if hasattr(chunk, "content") else chunk
+                    yield f"\n\n*(Respondido por: {info['name']})*"
+                return generator()
+            else:
+                return info["llm"].invoke(prompt).content + f"\n\n*(Respondido por: {info['name']})*"
+        except Exception as e:
+            print(f"[!] {info['name']} falhou no conselho. Erro: {e}")
+            continue
+            
+    try:
+        llm_local = OllamaLLM(model="qwen2.5:3b", temperature=0.3)
+        if stream:
+            stream_iter_local = llm_local.stream(prompt)
+            first_chunk_local = next(stream_iter_local)
+            def generator_local():
+                yield first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
+                for chunk in stream_iter_local:
+                    yield chunk.content if hasattr(chunk, "content") else chunk
+                yield "\n\n*(Respondido por: Qwen Local)*"
+            return generator_local()
+        return llm_local.invoke(prompt) + "\n\n*(Respondido por: Qwen Local)*"
+    except Exception as e2:
+        return f"Falha ao acionar o Conselho do Tutor. Erro Local: {e2}"

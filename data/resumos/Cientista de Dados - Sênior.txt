@@ -1,0 +1,63 @@
+Cientista de Dados - Sênior
+Localização primária:  São Paulo JK
+Outras localidades:  Em qualquer lugar do País
+Remuneração: Pacote a ser detalhado
+Data da abertura da vaga:  5 de jul. de 2026
+Descrição da oportunidade
+ID da requisição:  1684163
+Cientista de Dados - Sênior
+
+ 
+
+Na EY, estamos comprometidos em moldar seu futuro com confiança.
+
+Nós ajudaremos você a ter sucesso em um ambiente globalmente conectado, repleto de equipes diversas, e a levar sua carreira para onde você desejar.
+
+Venha para EY e ajude-nos a construir um mundo de negócios melhor.
+
+ 
+
+Sobre a oportunidade:
+
+Se você é apaixonado(a) por inovação, inteligência artificial e deseja impactar o setor financeiro com soluções de GenAI e Ciência de Dados, esta é a sua chance! Na EY, você terá a oportunidade de atuar em projetos de ponta, colaborando com equipes multidisciplinares e desenvolvendo soluções que transformam negócios, potencializando resultados e promovendo eficiência. Venha ser protagonista na revolução tecnológica do mercado financeiro!
+
+ 
+
+Você assumirá as seguintes responsabilidades:
+
+Desenvolver soluções de IA ponta a ponta, desde a descoberta até o deploy e monitoramento, incluindo modelagem (NLP/ML/LLMs), APIs e integrações. Projetar e evoluir chatbots e canais conversacionais com NLP/NLU, promovendo melhoria contínua. Construir integrações via APIs/JSON, microserviços e eventos, além de implantar MLOps com pipelines, versionamento e observabilidade. Analisar dados conversacionais e recomendar ações baseadas em KPIs, garantindo qualidade por meio de testes e validações. Atuar em métodos ágeis, colaborando com áreas de negócio, design, engenharia e segurança.
+
+ 
+
+Requisitos e habilidades que buscamos:
+
+Formação em Estatística, Matemática, Ciência/Engenharia da Computação, Sistemas de Informação, Engenharia de Produção ou áreas de tecnologia afins.
+Experiência aplicando IA/ML/GenAI em domínios como Atendimento e Conversational AI, Risco, Crédito, Cobrança, Fraude & AML, Personalização, Next Best Action/Offer, Operações & Eficiência; 
+Domínio das ferramentas: Python (pandas, numpy, scikit-learn, PySpark), SQL, JavaScript/Node.js, IBM Watson Assistant/Watsonx, Azure OpenAI, OpenAI, Hugging Face, spaCy, transformers, Rasa (desejável), FAISS, Azure AI Search, PGVector, MLflow/Databricks, SageMaker, Vertex AI, Azure ML, Docker, Kubernetes, CI/CD, Spark/Databricks, Airflow, Kafka/Event Hubs, APIs REST/JSON, webhooks, microserviços, Excel, Power BI, VS Code, Git/GitFlow, Jira/Confluence.
+ 
+
+Conheça alguns de nossos benefícios: Assistência médica e odontológica, Auxílio creche, Plataforma de benefícios e descontos exclusivos EY, Incentivos à educação, Day off de aniversário, Gympass/Wellhub, Participação nos Lucros (PLR), Previdência privada, Vale Alimentação e/ou Vale Alimentação e Transporte, e muito mais
+
+ 
+
+O que oferecemos:
+
+Na EY, você se desenvolve com habilidades voltadas para o futuro e se abastece de experiências de classe mundial. Nós capacitaremos você em um ambiente flexível e potencializaremos seus talentos extraordinários em uma cultura diversa e inclusiva, com equipes globalmente conectadas.
+
+Pelo 4º ano consecutivo, a EY está na lista do Great Place to Work como uma das melhores empresa para se trabalhar, com destaque para as categorias de diversidade. Você poderá fazer parte de nossos programas e grupos que, juntos a inúmeras iniciativas internas, apoiam nossa constante busca pela equidade.
+
+ 
+
+Você gostaria de moldar seu futuro com confiança? Inscreva-se hoje!
+
+ 
+
+Para ajudar a criar a melhor experiência durante o processo de recrutamento, por favor, descreva qualquer acessibilidade você possa precisar.
+
+ 
+
+Saiba mais sobre como é trabalhar na EY: 
+
+Carreiras na EY         LinkedIn @EY          Instagram @eybrasilcarreiras
+
+#GenAI #IAGenerativa #CiênciadeDados #MachineLearning #DeepLearning #FinancialServices #TechEY #FSOEY #DataScience #InteligênciaArtificial #CarreiraEY

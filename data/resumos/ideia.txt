@@ -1,0 +1,769 @@
+eu pensei aqui em criar um app com interface simples, como streamlit, com uma llm local ollama qwen 3b por exemplo onde me ajudaria a estudar um cronograma diario. lembrando q dei essa ideia de streamlit + qwen para ser mais pratico rapido e gratuito, mas pode ser melhorado, ja q tenho apenas um lenovo thinkpad t480
+
+Acho que você está pensando na direção certa, mas eu iria um passo além.
+
+Pelo seu currículo, você não precisa de um "chat com IA". Você precisa de um coach de concurso. São coisas bem diferentes.
+
+Um chat tipo ChatGPT local vira facilmente uma distração: você começa perguntando sobre ITIL e termina discutindo Kubernetes ou agentes de IA. O ideal é que o sistema não deixe você fugir do cronograma.
+
+O que eu faria
+
+Criaria um projeto chamado algo como:
+
+Concurseiro AI (ou outro nome)
+
+Ele seria composto por cinco módulos.
+
+1. Planejador
+
+Lê um arquivo YAML com o edital.
+
+Exemplo:
+
+Arquitetura
+  peso: 5
+  nivel: alto
+  dominio: 9
+
+Cloud
+  peso: 5
+  nivel: alto
+  dominio: 10
+
+ITIL
+  peso: 5
+  dominio: 2
+
+COBIT
+  peso: 4
+  dominio: 1
+
+LGPD
+  peso: 3
+  dominio: 5
+
+O sistema monta automaticamente o estudo diário.
+
+Quanto menor o domínio e maior o peso, mais tempo ele dedica.
+
+Não precisa de LLM para isso.
+
+2. Banco de questões
+
+SQLite.
+
+Cada questão teria algo assim:
+
+id
+
+banca
+
+ano
+
+órgão
+
+assunto
+
+subassunto
+
+enunciado
+
+alternativas
+
+gabarito
+
+explicação
+
+nível
+
+tempo médio
+
+Toda questão respondida gera estatísticas.
+
+Exemplo:
+
+Cloud
+
+68%
+
+Arquitetura
+
+95%
+
+ITIL
+
+42%
+
+COBIT
+
+31%
+
+Agora o cronograma muda sozinho.
+
+3. Tutor IA
+
+Aqui entra o Qwen.
+
+Mas eu não deixaria ele responder qualquer coisa.
+
+O prompt seria algo como:
+
+Explique apenas utilizando o conteúdo do edital Dataprev Perfil 2.
+
+Se o aluno perguntar algo fora do edital, informe isso.
+
+Sempre utilize exemplos de questões FGV.
+
+Isso evita alucinações e perda de foco.
+
+4. Flashcards automáticos
+
+Sempre que errar uma questão.
+
+A IA gera automaticamente:
+
+Pergunta
+
+Resposta
+
+Resumo
+
+Mnemônico
+
+Vai direto para Anki.
+
+5. Dashboard
+
+Tipo GitHub.
+
+██████░░░░
+
+65%
+
+Edital concluído
+
+e
+
+Arquitetura
+
+95%
+
+Cloud
+
+98%
+
+Segurança
+
+71%
+
+ITIL
+
+22%
+
+COBIT
+
+18%
+
+Você sabe exatamente onde está perdendo pontos.
+
+Eu não usaria Streamlit
+
+Essa é talvez a única parte da sua ideia que eu mudaria.
+
+Streamlit é excelente para dashboards.
+
+Mas para um projeto que você vai usar todos os dias por meses, eu faria:
+
+FastAPI
+
++
+
+React
+
++
+
+SQLite
+
++
+
+Ollama
+
+Ou ainda melhor:
+
+NextJS
+
++
+
+FastAPI
+
++
+
+Ollama
+
+Você domina React/Next, pelo seu currículo.
+
+Vai ficar muito melhor.
+
+Sobre o modelo
+
+Aqui também mudaria.
+
+Qwen 3B funciona.
+
+Mas hoje existem opções melhores para seu notebook.
+
+Eu tentaria, nesta ordem:
+
+1º Qwen2.5 7B Instruct Q4_K_M
+
+Excelente em raciocínio.
+
+Roda em CPU.
+
+2º Gemma 3 4B
+
+Muito boa em explicação.
+
+3º Qwen3 4B
+
+Também excelente.
+
+4º Phi-4 Mini
+
+Muito rápido.
+
+Num T480, com 32 GB de RAM e SSD, todos esses modelos em GGUF quantizado são utilizáveis em CPU. Se o seu tiver apenas 16 GB, eu priorizaria modelos de 3B–4B.
+
+A melhor parte
+
+Você não precisa de internet.
+
+Pode colocar dentro do projeto:
+
+/Edital
+
+pdf
+
+markdown
+
+/Questões
+
+FGV
+
+SERPRO
+
+DATAPREV
+
+TCU
+
+TRF
+
+/Resumos
+
+markdown
+/Documentação
+
+ITIL
+
+COBIT
+
+LGPD
+
+ISO
+
+
+A IA responde usando apenas isso (RAG).
+
+Uma ideia que acho muito mais poderosa
+
+Conhecendo o seu perfil de engenheiro e vendo os projetos que você já fez, eu não faria um chatbot.
+
+Eu faria um Sistema Operacional de Estudos.
+
+Algo como:
+
+08:00
+
+Bom dia.
+
+Hoje você estudará:
+
+✔ Cloud (35 min)
+
+✔ ITIL (50 min)
+
+✔ COBIT (40 min)
+
+✔ 60 questões
+
+✔ Revisão Anki (20 min)
+
+Tempo previsto:
+
+3h12
+
+Depois da teoria:
+
+Iniciando bloco de questões...
+
+Você responde.
+
+No final:
+
+Cloud
+
+18/20
+
+ITIL
+
+12/20
+
+COBIT
+
+8/20
+
+Você está errando:
+
+• Gerenciamento de Incidentes
+• Cadeia de Valor do ITIL
+• Princípios do COBIT
+
+Cronograma de amanhã atualizado automaticamente.
+
+Ou seja, ele funciona como um personal trainer: identifica fraquezas, reajusta o treino e mede evolução. Isso explora muito melhor a sua experiência com IA do que um simples chat, e ainda rende um projeto técnico excelente para o seu portfólio. Além de aumentar suas chances no concurso, você estará construindo uma ferramenta reutilizável para qualquer certificação ou prova futura.
+
+é pq muita coisa no meu perfil ta inflada q eu me garantiria no dia a dia, nao em uma prova, o react e next.js sao exemplos. entao eu preciso criar o programa enquanto estudo colocando em pratica as questoes da prova. eu tenho 16gb de memoria no t480, tenho antigravity e o qwen 3b preparados no meu notebook. entao quero sua ajuda pra criar esse aplicativo.mas seja objetivo pq hj é sexta, domingo é o jogo do brasil e eu ja quero começar a estudar na segunda.
+
+Acho que dá para fazer algo muito bom **sem transformar isso em outro projeto que nunca termina**.
+
+Meu objetivo seria: **na segunda-feira você já estuda usando o sistema**, mesmo que ele tenha só 10% das funcionalidades finais.
+
+## Stack (não mudaria)
+
+- Backend: FastAPI
+- Frontend: Streamlit (por enquanto)
+- Banco: SQLite
+- LLM: Ollama + Qwen 3B
+- Embeddings: nomic-embed-text
+- RAG: ChromaDB (ou FAISS)
+
+**Por que Streamlit?**
+
+Porque você quer começar segunda. Em 2 horas você faz uma interface funcional. Depois, se passar no concurso, migra para React.
+
+---
+
+# MVP (fim de semana)
+
+Esqueça dashboard bonito.
+
+Só precisamos de 5 telas.
+
+## 1. Hoje
+
+```
+Hoje
+
+Tempo previsto: 3h40
+
+[ ] Arquitetura (30 min)
+
+[ ] ITIL (45 min)
+
+[ ] 30 questões
+
+[ ] Revisão
+
+[Iniciar]
+```
+
+---
+
+## 2. Estudo
+
+Divide a tela.
+
+```
+---------------------
+
+Questão
+
+---------------------
+
+Resposta
+
+---------------------
+
+Chat IA
+```
+
+A IA responde apenas sobre o edital.
+
+---
+
+## 3. Estatísticas
+
+```
+Arquitetura
+
+90%
+
+Cloud
+
+95%
+
+ITIL
+
+43%
+
+COBIT
+
+20%
+
+LGPD
+
+61%
+```
+
+Nada além disso.
+
+---
+
+## 4. Histórico
+
+```
+01/07
+
+65%
+
+02/07
+
+71%
+
+03/07
+
+79%
+```
+
+---
+
+## 5. Configuração
+
+Escolher:
+
+- concurso
+- banca
+- perfil
+
+Só isso.
+
+---
+
+# Estrutura do projeto
+
+```
+concurseiro/
+
+app.py
+
+backend/
+
+database.py
+
+scheduler.py
+
+llm.py
+
+rag.py
+
+parser.py
+
+question_service.py
+
+study_service.py
+
+data/
+
+edital/
+
+questoes/
+
+resumos/
+
+flashcards/
+
+db.sqlite
+```
+
+---
+
+# O fluxo
+
+Você abre.
+
+↓
+
+Hoje tem:
+
+```
+Cloud
+
+20 minutos
+```
+
+↓
+
+Lê o resumo.
+
+↓
+
+Clica:
+
+```
+Começar questões
+```
+
+↓
+
+Aparecem 20 questões.
+
+↓
+
+Acertou 18.
+
+↓
+
+Errou 2.
+
+↓
+
+O sistema pergunta ao Qwen:
+
+```
+Explique apenas o conceito que levou ao erro.
+
+Máximo 8 linhas.
+
+Utilize linguagem objetiva.
+
+Mostre um exemplo FGV.
+```
+
+↓
+
+Terminou.
+
+↓
+
+Atualiza o banco.
+
+↓
+
+Próximo assunto.
+
+---
+
+# Onde a IA entra
+
+Pouco.
+
+Ela NÃO decide cronograma.
+
+Ela NÃO escolhe questões.
+
+Ela NÃO calcula nota.
+
+Ela só faz quatro coisas:
+
+## Explicar
+
+```
+Explique VLAN.
+```
+
+---
+
+## Resumir
+
+```
+Resuma ITIL em 10 tópicos.
+```
+
+---
+
+## Gerar flashcard
+
+```
+Pergunta
+
+Resposta
+```
+
+---
+
+## Tirar dúvida
+
+Só isso.
+
+Todo o resto é algoritmo.
+
+---
+
+# Cronograma inteligente
+
+Exemplo.
+
+Você respondeu
+
+```
+Cloud
+
+90%
+
+Docker
+
+95%
+
+Linux
+
+100%
+
+ITIL
+
+35%
+
+COBIT
+
+22%
+```
+
+Segunda:
+
+```
+ITIL
+```
+
+Terça:
+
+```
+COBIT
+```
+
+Quarta:
+
+```
+ITIL
+```
+
+Quinta:
+
+```
+LGPD
+```
+
+Sexta:
+
+```
+COBIT
+```
+
+Sem LLM.
+
+Só SQL.
+
+---
+
+# O banco
+
+Tabela assuntos
+
+```
+id
+
+nome
+
+peso
+
+dominio
+
+ultima_revisao
+
+proxima_revisao
+```
+
+Tabela questões
+
+```
+id
+
+assunto
+
+banca
+
+ano
+
+dificuldade
+
+gabarito
+```
+
+Tabela respostas
+
+```
+questao
+
+acertou
+
+tempo
+
+data
+```
+
+Tabela sessões
+
+```
+inicio
+
+fim
+
+tempo
+
+nota
+```
+
+Acabou.
+
+---
+
+# O que eu faria neste fim de semana
+
+### Sexta (hoje)
+
+- Criar o projeto.
+- FastAPI.
+- Streamlit.
+- SQLite.
+- Ollama funcionando.
+
+### Sábado
+
+- Importar o edital.
+- Importar as questões.
+- Criar a tela "Hoje".
+- Criar a tela "Questões".
+
+### Domingo (antes ou depois do jogo)
+
+- Integrar o Qwen.
+- Testar uma sessão completa de estudo.
+- Ajustar os prompts.
+
+**Na segunda-feira você já começa estudando com o seu próprio sistema.**
+
+## Minha proposta
+
+Em vez de eu apenas sugerir funcionalidades, vamos construir isso como um projeto real.
+
+A cada etapa eu te entrego código que possa ser copiado e executado em **30 a 60 minutos**, sem "arquitetura astronauta". A ideia é que o aplicativo evolua junto com seus estudos: cada funcionalidade nova precisa ser útil para o concurso já no dia em que for implementada.
+
+Acho que em **duas semanas** conseguimos ter uma ferramenta muito melhor do que um simples chat com LLM, e ainda totalmente compatível com o hardware do seu T480 (16 GB de RAM + Ollama + Qwen 3B).
