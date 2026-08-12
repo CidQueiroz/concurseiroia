@@ -15,6 +15,20 @@ except ImportError:
 
 load_dotenv()
 
+def _get_chunk_text(chunk):
+    c = chunk.content if hasattr(chunk, "content") else chunk
+    if isinstance(c, str):
+        return c
+    if isinstance(c, list):
+        res = ""
+        for item in c:
+            if isinstance(item, dict) and "text" in item:
+                res += item["text"]
+            elif isinstance(item, str):
+                res += item
+        return res
+    return str(c) if c is not None else ""
+
 def get_llm_pool(temperature=0.1, json_mode=False, prefer_gemini=False):
     groq_pool = []
     gemini_pool = []
@@ -116,11 +130,11 @@ def explicar_erro(enunciado, alternativa_correta, alternativa_marcada, acertou=F
                 first_chunk = next(stream_iter)
                 def generator():
                     try:
-                        c = first_chunk.content if hasattr(first_chunk, "content") else first_chunk
-                        if c is not None: yield str(c)
+                        txt = _get_chunk_text(first_chunk)
+                        if txt: yield txt
                         for chunk in stream_iter:
-                            c = chunk.content if hasattr(chunk, "content") else chunk
-                            if c is not None: yield str(c)
+                            txt = _get_chunk_text(chunk)
+                            if txt: yield txt
                         yield f"\n\n*(Respondido por: {info['name']})*"
                     except Exception as e:
                         yield f"\n\n*(Erro durante a resposta da API: {str(e)})*"
@@ -140,17 +154,21 @@ def explicar_erro(enunciado, alternativa_correta, alternativa_marcada, acertou=F
             first_chunk_local = next(stream_iter_local)
             def generator_local():
                 try:
-                    c = first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
-                    if c is not None: yield str(c)
+                    txt = _get_chunk_text(first_chunk_local)
+                    if txt: yield txt
                     for chunk in stream_iter_local:
-                        c = chunk.content if hasattr(chunk, "content") else chunk
-                        if c is not None: yield str(c)
+                        txt = _get_chunk_text(chunk)
+                        if txt: yield txt
                 except Exception as e:
                     yield f"\n\n*(Erro local: {str(e)})*"
             return generator_local()
         return llm_local.invoke(prompt_str)
     except Exception as e2:
-        return f"Falha geral ao gerar análise. Erro Local: {e2}"
+        msg = f"Falha geral ao gerar análise. Erro Local: {e2}"
+        if stream:
+            def err_gen(): yield msg
+            return err_gen()
+        return msg
 
 def gerar_conteudo_estudo(grupo, subgrupo):
     from backend.prompts.tutor import get_prompt_estudo
@@ -265,11 +283,11 @@ def mentoria_ia(enunciado, alternativas, letra_escolhida=None, historico=None, s
                 first_chunk = next(stream_iter)
                 def generator():
                     try:
-                        c = first_chunk.content if hasattr(first_chunk, "content") else first_chunk
-                        if c is not None: yield str(c)
+                        txt = _get_chunk_text(first_chunk)
+                        if txt: yield txt
                         for chunk in stream_iter:
-                            c = chunk.content if hasattr(chunk, "content") else chunk
-                            if c is not None: yield str(c)
+                            txt = _get_chunk_text(chunk)
+                            if txt: yield txt
                         yield f"\n\n*(Respondido por: {info['name']})*"
                     except Exception as e:
                         yield f"\n\n*(Erro na Mentoria: {str(e)})*"
@@ -288,17 +306,21 @@ def mentoria_ia(enunciado, alternativas, letra_escolhida=None, historico=None, s
             first_chunk_local = next(stream_iter_local)
             def generator_local():
                 try:
-                    c = first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
-                    if c is not None: yield str(c)
+                    txt = _get_chunk_text(first_chunk_local)
+                    if txt: yield txt
                     for chunk in stream_iter_local:
-                        c = chunk.content if hasattr(chunk, "content") else chunk
-                        if c is not None: yield str(c)
+                        txt = _get_chunk_text(chunk)
+                        if txt: yield txt
                 except Exception as e:
                     yield f"\n\n*(Erro local na Mentoria: {str(e)})*"
             return generator_local()
         return llm_local.invoke(prompt_str)
     except Exception as e2:
-        return f"Falha ao acionar a Mentoria. Erro Local: {e2}"
+        msg = f"Falha ao acionar a Mentoria. Erro Local: {e2}"
+        if stream:
+            def err_gen(): yield msg
+            return err_gen()
+        return msg
 
 def conselho_tutor_ia(dados_estatisticos, erros_detalhados, stream=False):
     from backend.prompts.tutor import get_prompt_conselho_tutor
@@ -313,11 +335,11 @@ def conselho_tutor_ia(dados_estatisticos, erros_detalhados, stream=False):
                 first_chunk = next(stream_iter)
                 def generator():
                     try:
-                        c = first_chunk.content if hasattr(first_chunk, "content") else first_chunk
-                        if c is not None: yield str(c)
+                        txt = _get_chunk_text(first_chunk)
+                        if txt: yield txt
                         for chunk in stream_iter:
-                            c = chunk.content if hasattr(chunk, "content") else chunk
-                            if c is not None: yield str(c)
+                            txt = _get_chunk_text(chunk)
+                            if txt: yield txt
                         yield f"\n\n*(Respondido por: {info['name']})*"
                     except Exception as e:
                         yield f"\n\n*(Erro no Conselho: {str(e)})*"
@@ -335,15 +357,19 @@ def conselho_tutor_ia(dados_estatisticos, erros_detalhados, stream=False):
             first_chunk_local = next(stream_iter_local)
             def generator_local():
                 try:
-                    c = first_chunk_local.content if hasattr(first_chunk_local, "content") else first_chunk_local
-                    if c is not None: yield str(c)
+                    txt = _get_chunk_text(first_chunk_local)
+                    if txt: yield txt
                     for chunk in stream_iter_local:
-                        c = chunk.content if hasattr(chunk, "content") else chunk
-                        if c is not None: yield str(c)
+                        txt = _get_chunk_text(chunk)
+                        if txt: yield txt
                     yield "\n\n*(Respondido por: Qwen Local)*"
                 except Exception as e:
                     yield f"\n\n*(Erro no Conselho Local: {str(e)})*"
             return generator_local()
         return llm_local.invoke(prompt) + "\n\n*(Respondido por: Qwen Local)*"
     except Exception as e2:
-        return f"Falha ao acionar o Conselho do Tutor. Erro Local: {e2}"
+        msg = f"Falha ao acionar o Conselho do Tutor. Erro Local: {e2}"
+        if stream:
+            def err_gen(): yield msg
+            return err_gen()
+        return msg
