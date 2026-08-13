@@ -27,14 +27,15 @@ def render(DB_PATH=None):
     
     # 2. Distribuição do Banco
     st.subheader("Distribuição do Banco de Questões 📚")
-    resp_dist = supabase.table("questoes").select("id, subgrupos(nome, grupos(nome))").execute().data
+    resp_dist = supabase.table("questoes").select("id, itens_estudo(nome, subgrupos(nome, grupos(nome)))").execute().data
     
     dist_data = []
     for q in resp_dist:
-        if q.get('subgrupos') and q['subgrupos'].get('grupos'):
+        if q.get('itens_estudo') and q['itens_estudo'].get('subgrupos') and q['itens_estudo']['subgrupos'].get('grupos'):
             dist_data.append({
-                "Grupo": q['subgrupos']['grupos']['nome'],
-                "Subgrupo": q['subgrupos']['nome'],
+                "Grupo": q['itens_estudo']['subgrupos']['grupos']['nome'],
+                "Subgrupo": q['itens_estudo']['subgrupos']['nome'],
+                "Item": q['itens_estudo']['nome'],
                 "id": q['id']
             })
     
@@ -53,9 +54,10 @@ def render(DB_PATH=None):
     
     resp_data = []
     for r in resp_respostas:
-        if r.get('questoes') and r['questoes'].get('subgrupos') and r['questoes']['subgrupos'].get('grupos'):
-            g_nome = r['questoes']['subgrupos']['grupos']['nome']
-            s_nome = r['questoes']['subgrupos']['nome']
+        if r.get('questoes') and r['questoes'].get('itens_estudo') and r['questoes']['itens_estudo'].get('subgrupos') and r['questoes']['itens_estudo']['subgrupos'].get('grupos'):
+            g_nome = r['questoes']['itens_estudo']['subgrupos']['grupos']['nome']
+            s_nome = r['questoes']['itens_estudo']['subgrupos']['nome']
+            i_nome = r['questoes']['itens_estudo']['nome']
             
             if g_nome.upper() not in ['FORA DO EDITAL', 'NÃO CLASSIFICADO', 'NAO CLASSIFICADO']:
                 resp_data.append({
@@ -64,9 +66,9 @@ def render(DB_PATH=None):
                     "acertou": r['acertou'],
                     "tempo_segundos": r['tempo_segundos'],
                     "data": r['data'],
-                    "item_id": r['questoes']['subgrupo_id'],
-                    "item_nome": s_nome,
-                    "grupo_nome": g_nome
+                    "grupo_nome": g_nome,
+                    "subgrupo_nome": s_nome,
+                    "item_nome": i_nome
                 })
                 
     df_resp = pd.DataFrame(resp_data)
@@ -174,7 +176,7 @@ def render(DB_PATH=None):
     st.markdown("<h3 style='margin-top: 0px; margin-bottom: -30px;'>Evolução Temporal 📈</h3>", unsafe_allow_html=True)
     if not df_resp.empty:
         df_resp_tempo = df_resp.copy()
-        df_resp_tempo['data'] = pd.to_datetime(df_resp_tempo['data']).dt.tz_localize(None)
+        df_resp_tempo['data'] = pd.to_datetime(df_resp_tempo['data'], format='mixed', utc=True).dt.tz_localize(None)
         df_resp_tempo['data_dia'] = df_resp_tempo['data'].dt.date
         
         daily_acc = df_resp_tempo.groupby('data_dia').agg(
@@ -188,7 +190,7 @@ def render(DB_PATH=None):
         daily_acc['acertos_acumulados'] = daily_acc['acertos'].cumsum()
         daily_acc['Pontos Gerais'] = (daily_acc['acertos_acumulados'] / daily_acc['total_acumulado']) * 115
         
-        daily_acc['data_dia_dt'] = pd.to_datetime(daily_acc['data_dia'])
+        daily_acc['data_dia_dt'] = pd.to_datetime(daily_acc['data_dia'], format='mixed', utc=True)
         
         import altair as alt
         
@@ -281,22 +283,25 @@ def render(DB_PATH=None):
     st.subheader("Desempenho por Tópico (Raio-X)")
     
     if not df_resp.empty:
-        agg_resp = df_resp.groupby("item_nome").agg(
+        df_resp_raiox = df_resp.copy()
+        df_resp_raiox['topico_completo'] = df_resp_raiox['subgrupo_nome'] + ' ➔ ' + df_resp_raiox['item_nome']
+        
+        agg_resp = df_resp_raiox.groupby("topico_completo").agg(
             total_questoes=('id', 'count'),
             acertos=('acertou', 'sum')
         ).reset_index()
         agg_resp['taxa_acerto'] = (agg_resp['acertos'] / agg_resp['total_questoes'] * 100).round(1)
     else:
-        agg_resp = pd.DataFrame(columns=["item_nome", "total_questoes", "acertos", "taxa_acerto"])
+        agg_resp = pd.DataFrame(columns=["topico_completo", "total_questoes", "acertos", "taxa_acerto"])
         
     if not agg_resp.empty:
-        df_raiox = agg_resp[["item_nome", "total_questoes", "taxa_acerto"]].sort_values("total_questoes", ascending=False)
+        df_raiox = agg_resp[["topico_completo", "total_questoes", "taxa_acerto"]].sort_values("total_questoes", ascending=False)
         styled_raiox = df_raiox.style.set_properties(subset=['total_questoes'], **{'text-align': 'center'})
         
         st.dataframe(
             styled_raiox,
             column_config={
-                "item_nome": "Tópico (Subgrupo)",
+                "topico_completo": "Tópico (Subgrupo ➔ Item)",
                 "total_questoes": "Questões",
                 "taxa_acerto": st.column_config.ProgressColumn("Acerto (%)", min_value=0, max_value=100, format="%f%%")
             },
@@ -307,14 +312,14 @@ def render(DB_PATH=None):
     else:
         st.info("Ainda não há dados suficientes para gerar as estatísticas por tópico.")
         
-    st.markdown("---")
+    '''st.markdown("---")
     st.subheader("Tempo de Resolução dos Simulados ⏱️")
     
     resp_sim = supabase.table("historico_simulados").select("*").eq("user_id", user.id).order("data", desc=False).execute().data
     df_sim_time = pd.DataFrame(resp_sim)
     
     if not df_sim_time.empty:
-        df_sim_time['data'] = pd.to_datetime(df_sim_time['data']).dt.tz_localize(None)
+        df_sim_time['data'] = pd.to_datetime(df_sim_time['data'], format='mixed', utc=True).dt.tz_localize(None)
         df_sim_time['data_simulado'] = df_sim_time['data'].dt.date
         
         df_sim_time['Minutos'] = (df_sim_time['tempo_segundos'] / 60).round(1)
@@ -334,4 +339,4 @@ def render(DB_PATH=None):
         
         st.altair_chart(chart_time, use_container_width=True)
     else:
-        st.info("Conclua Simulados Gerais na aba 'Modo Prova' para visualizar o histórico de tempo de resolução.")
+        st.info("Conclua Simulados Gerais na aba 'Modo Prova' para visualizar o histórico de tempo de resolução.")'''
