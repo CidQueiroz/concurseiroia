@@ -1,35 +1,33 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
-import json
-import time
-import os
-import datetime
+from backend.db import get_supabase
 
-
-def get_subgrupo_id(grupo, subgrupo, DB_PATH):
-    import sqlite3
-    conn = sqlite3.connect(DB_PATH, timeout=15)
-    cur = conn.cursor()
-    cur.execute("SELECT id FROM subgrupos WHERE nome = ?", (subgrupo,))
-    row = cur.fetchone()
-    sub_id = None
-    if row:
-        sub_id = row[0]
+def get_subgrupo_id(grupo, subgrupo):
+    supabase = get_supabase()
+    
+    # 1. Busca ou cria o Grupo
+    resp_g = supabase.table("grupos").select("id").eq("nome", grupo).execute()
+    if resp_g.data:
+        g_id = resp_g.data[0]["id"]
     else:
-        cur.execute("SELECT id FROM grupos WHERE nome = ?", (grupo,))
-        row_g = cur.fetchone()
-        if row_g: g_id = row_g[0]
-        else:
-            cur.execute("INSERT INTO grupos (nome) VALUES (?)", (grupo,))
-            g_id = cur.lastrowid
-        cur.execute("INSERT INTO subgrupos (grupo_id, nome, peso) VALUES (?, ?, 1.0)", (g_id, subgrupo))
-        sub_id = cur.lastrowid
-        conn.commit()
-    conn.close()
+        resp_ins_g = supabase.table("grupos").insert({"nome": grupo}).execute()
+        g_id = resp_ins_g.data[0]["id"]
+        
+    # 2. Busca ou cria o Subgrupo
+    resp_s = supabase.table("subgrupos").select("id").eq("grupo_id", g_id).eq("nome", subgrupo).execute()
+    if resp_s.data:
+        sub_id = resp_s.data[0]["id"]
+    else:
+        resp_ins_s = supabase.table("subgrupos").insert({"grupo_id": g_id, "nome": subgrupo, "peso": 1}).execute()
+        sub_id = resp_ins_s.data[0]["id"]
+        
     return sub_id
 
-def render(DB_PATH):
+def render(DB_PATH=None):
+    supabase = get_supabase()
+    user = st.session_state.get("user")
+    is_admin = (user and user.email == "cydy.potter@gmail.com")
+
     st.header("Gerenciador de Questões 🛠️")
     st.markdown("Busque questões por tema ou por palavra-chave para editar o gabarito, o enunciado ou removê-las do banco.")
     
@@ -43,38 +41,44 @@ def render(DB_PATH):
         if st.button("Buscar por Texto", key="btn_busca_txt"):
             if termo.strip():
                 terms = termo.strip().split()
-                like_clauses = " AND ".join([f"enunciado LIKE '%{t}%'" for t in terms])
-                conn = sqlite3.connect(DB_PATH)
-                df = pd.read_sql_query(f"SELECT * FROM questoes WHERE {like_clauses} LIMIT 100", conn)
-                conn.close()
-                st.session_state.gerenciador_results = df
+                query = supabase.table("questoes").select("*")
+                for t in terms:
+                    query = query.ilike("enunciado", f"%{t}%")
+                resp = query.limit(100).execute()
+                st.session_state.gerenciador_results = pd.DataFrame(resp.data)
             else:
                 st.warning("Digite algo para buscar.")
                 
     with tab_tema:
-        conn = sqlite3.connect(DB_PATH)
-        df_g = pd.read_sql_query("SELECT id, nome FROM grupos ORDER BY nome", conn)
+        df_g = pd.DataFrame(supabase.table("grupos").select("id, nome").order("nome").execute().data)
         grupo_sel = st.selectbox("Selecione o Grupo:", df_g['nome'].tolist() if not df_g.empty else [])
         
         if grupo_sel:
             g_id = df_g[df_g['nome'] == grupo_sel].iloc[0]['id']
-            df_s = pd.read_sql_query(f"SELECT id, nome FROM subgrupos WHERE grupo_id = {g_id} ORDER BY nome", conn)
+            df_s = pd.DataFrame(supabase.table("subgrupos").select("id, nome").eq("grupo_id", g_id).order("nome").execute().data)
             sub_sel = st.selectbox("Selecione o Subgrupo:", df_s['nome'].tolist() if not df_s.empty else [])
             
             if st.button("Buscar por Tema", key="btn_busca_tema"):
                 if sub_sel:
-                    s_id = df_s[df_s['nome'] == sub_sel].iloc[0]['id']
-                    df = pd.read_sql_query(f"SELECT * FROM questoes WHERE subgrupo_id = {s_id} LIMIT 100", conn)
-                    st.session_state.gerenciador_results = df
-        conn.close()
-        
+                    s_id = int(df_s[df_s['nome'] == sub_sel].iloc[0]['id'])
+                    resp = supabase.table("questoes").select("*").eq("item_id", s_id).limit(100).execute()
+                    st.session_state.gerenciador_results = pd.DataFrame(resp.data)
+                    
     with tab_add:
         st.subheader("Adicionar Nova Questão Manualmente")
         
-        conn = sqlite3.connect(DB_PATH)
-        df_g_add = pd.read_sql_query("SELECT id, nome FROM grupos ORDER BY nome", conn)
-        df_todas_subs_add = pd.read_sql_query('SELECT s.id, s.grupo_id, g.nome as grupo, s.nome as subgrupo FROM subgrupos s JOIN grupos g ON s.grupo_id = g.id ORDER BY g.nome, s.nome', conn)
-        conn.close()
+        df_g_add = pd.DataFrame(supabase.table("grupos").select("id, nome").order("nome").execute().data)
+        
+        # Buscar todos os subgrupos com seus grupos
+        subs_raw = supabase.table("subgrupos").select("id, grupo_id, nome, grupos(nome)").execute().data
+        todas_subs_list = []
+        for s in subs_raw:
+            if s.get("grupos"):
+                todas_subs_list.append({
+                    "id": s["id"], "grupo_id": s["grupo_id"], 
+                    "grupo": s["grupos"]["nome"], "subgrupo": s["nome"]
+                })
+        df_todas_subs_add = pd.DataFrame(todas_subs_list)
         
         list_g_nomes_add = df_g_add['nome'].tolist() if not df_g_add.empty else []
         
@@ -90,7 +94,8 @@ def render(DB_PATH):
         if not novo_g_check and add_g_nome and not df_g_add.empty:
             if add_g_nome in df_g_add['nome'].values:
                 add_g_id = df_g_add[df_g_add['nome'] == add_g_nome].iloc[0]['id']
-                add_s_nomes = df_todas_subs_add[df_todas_subs_add['grupo_id'] == add_g_id]['subgrupo'].tolist()
+                if not df_todas_subs_add.empty:
+                    add_s_nomes = df_todas_subs_add[df_todas_subs_add['grupo_id'] == add_g_id]['subgrupo'].tolist()
             
         with colS_add:
             novo_s_check = st.checkbox("➕ Novo Tópico (Subgrupo)", key="check_novo_s")
@@ -124,16 +129,22 @@ def render(DB_PATH):
                 if not add_enun or not add_gab or not add_s_nome or not add_g_nome:
                     st.error("Preencha ao menos a Matéria, Tópico, Enunciado e Gabarito!")
                 else:
-                    # Usando a função inteligente para buscar ou criar
-                    add_s_id = get_subgrupo_id(add_g_nome, add_s_nome, DB_PATH)
+                    add_s_id = get_subgrupo_id(add_g_nome, add_s_nome)
                     
-                    conn = sqlite3.connect(DB_PATH)
-                    conn.execute('''INSERT INTO questoes 
-                        (enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e, gabarito, subgrupo_id, banca, ano, valida)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-                    ''', (add_enun, add_a, add_b, add_c, add_d, add_e, add_gab.upper().strip(), int(add_s_id), add_banca, add_ano))
-                    conn.commit()
-                    conn.close()
+                    nova_questao = {
+                        "enunciado": add_enun,
+                        "alternativa_a": add_a,
+                        "alternativa_b": add_b,
+                        "alternativa_c": add_c,
+                        "alternativa_d": add_d,
+                        "alternativa_e": add_e,
+                        "gabarito": add_gab.upper().strip(),
+                        "item_id": int(add_s_id),
+                        "banca": add_banca,
+                        "ano": int(add_ano) if add_ano.isdigit() else None,
+                        "valida": 1
+                    }
+                    supabase.table("questoes").insert(nova_questao).execute()
                     st.success("Questão adicionada e validada com sucesso! (Nova matéria criada, se não existia).")
         
     st.markdown("---")
@@ -141,18 +152,24 @@ def render(DB_PATH):
     if not df_res.empty:
         st.success(f"Encontradas {len(df_res)} questões (mostrando até 100).")
         
-        conn = sqlite3.connect(DB_PATH)
-        df_todas_subs = pd.read_sql_query('SELECT s.id, s.grupo_id, g.nome as grupo, s.nome as subgrupo FROM subgrupos s JOIN grupos g ON s.grupo_id = g.id ORDER BY g.nome, s.nome', conn)
-        df_g = pd.read_sql_query("SELECT id, nome FROM grupos ORDER BY nome", conn)
-        conn.close()
+        # Recarregar os grupos
+        df_g = pd.DataFrame(supabase.table("grupos").select("id, nome").order("nome").execute().data)
+        subs_raw = supabase.table("subgrupos").select("id, grupo_id, nome, grupos(nome)").execute().data
+        todas_subs_list = []
+        for s in subs_raw:
+            if s.get("grupos"):
+                todas_subs_list.append({
+                    "id": s["id"], "grupo_id": s["grupo_id"], 
+                    "grupo": s["grupos"]["nome"], "subgrupo": s["nome"]
+                })
+        df_todas_subs = pd.DataFrame(todas_subs_list)
         
-        map_subs_to_group = {row['id']: row['grupo_id'] for _, row in df_todas_subs.iterrows()}
+        map_subs_to_group = {row['id']: row['grupo_id'] for _, row in df_todas_subs.iterrows()} if not df_todas_subs.empty else {}
         
         for idx, row in df_res.iterrows():
             q_id = row['id']
             val = row.get('valida', 0)
             
-            # Formata status
             if pd.isna(val) or val == 0:
                 status_str = "⚪ Não Validada"
             elif val == 1:
@@ -162,80 +179,90 @@ def render(DB_PATH):
             else:
                 status_str = "⚪ Desconhecido"
                 
-            enunciado_trunc = str(row['enunciado'])[:80] + "..."
+            enunciado_trunc = str(row.get('enunciado', ''))[:80] + "..."
             
             with st.expander(f"[Q{q_id}] {status_str} | {enunciado_trunc}"):
                 
                 colG, colS = st.columns(2)
                 
                 current_sub_id = row.get('subgrupo_id')
-                curr_g_id = map_subs_to_group.get(current_sub_id, df_g.iloc[0]['id'])
+                curr_g_id = map_subs_to_group.get(current_sub_id, df_g.iloc[0]['id'] if not df_g.empty else None)
                 
-                list_g_nomes = df_g['nome'].tolist()
-                curr_g_nome = df_g[df_g['id'] == curr_g_id].iloc[0]['nome']
+                list_g_nomes = df_g['nome'].tolist() if not df_g.empty else []
+                curr_g_nome = ""
+                if curr_g_id and not df_g.empty:
+                    match_g = df_g[df_g['id'] == curr_g_id]
+                    if not match_g.empty:
+                        curr_g_nome = match_g.iloc[0]['nome']
+                        
                 idx_g = list_g_nomes.index(curr_g_nome) if curr_g_nome in list_g_nomes else 0
                 
                 with colG:
                     sel_g_nome = st.selectbox("Grupo (Salva automaticamente ao mudar)", list_g_nomes, index=idx_g, key=f"sel_g_{q_id}")
                     
-                sel_g_id_real = df_g[df_g['nome'] == sel_g_nome].iloc[0]['id']
-                df_s_filtered = df_todas_subs[df_todas_subs['grupo_id'] == sel_g_id_real].reset_index(drop=True)
-                list_s_nomes = df_s_filtered['subgrupo'].tolist()
-                
-                idx_s = 0
-                if sel_g_id_real == curr_g_id:
-                    curr_s_nome_df = df_s_filtered[df_s_filtered['id'] == current_sub_id]
-                    if not curr_s_nome_df.empty:
-                        curr_s_nome = curr_s_nome_df.iloc[0]['subgrupo']
-                        if curr_s_nome in list_s_nomes:
-                            idx_s = list_s_nomes.index(curr_s_nome)
-                
-                with colS:
-                    if list_s_nomes:
-                        sel_s_nome = st.selectbox("Subgrupo / Tópico", list_s_nomes, index=idx_s, key=f"sel_s_{q_id}")
-                        sel_s_id_real = df_s_filtered[df_s_filtered['subgrupo'] == sel_s_nome].iloc[0]['id']
-                    else:
-                        st.warning("Sem subgrupos neste grupo.")
-                        sel_s_id_real = current_sub_id
-                        
-                with st.form(key=f"form_edit_{q_id}"):
-                    novo_enun = st.text_area("Enunciado", row['enunciado'], height=100)
+                if sel_g_nome:
+                    sel_g_id_real = df_g[df_g['nome'] == sel_g_nome].iloc[0]['id']
+                    df_s_filtered = df_todas_subs[df_todas_subs['grupo_id'] == sel_g_id_real].reset_index(drop=True)
+                    list_s_nomes = df_s_filtered['subgrupo'].tolist()
                     
-                    colA, colB = st.columns(2)
-                    with colA:
-                        nova_a = st.text_input("Alternativa A", row.get('alternativa_a', ''))
-                        nova_b = st.text_input("Alternativa B", row.get('alternativa_b', ''))
-                        nova_c = st.text_input("Alternativa C", row.get('alternativa_c', ''))
-                    with colB:
-                        nova_d = st.text_input("Alternativa D", row.get('alternativa_d', ''))
-                        nova_e = st.text_input("Alternativa E", row.get('alternativa_e', ''))
-                        novo_gab = st.text_input("Gabarito Correto (A, B, C, D ou E)", row.get('gabarito', ''))
+                    idx_s = 0
+                    if sel_g_id_real == curr_g_id:
+                        curr_s_nome_df = df_s_filtered[df_s_filtered['id'] == current_sub_id]
+                        if not curr_s_nome_df.empty:
+                            curr_s_nome = curr_s_nome_df.iloc[0]['subgrupo']
+                            if curr_s_nome in list_s_nomes:
+                                idx_s = list_s_nomes.index(curr_s_nome)
+                    
+                    with colS:
+                        if list_s_nomes:
+                            sel_s_nome = st.selectbox("Subgrupo / Tópico", list_s_nomes, index=idx_s, key=f"sel_s_{q_id}")
+                            sel_s_id_real = df_s_filtered[df_s_filtered['subgrupo'] == sel_s_nome].iloc[0]['id']
+                        else:
+                            st.warning("Sem subgrupos neste grupo.")
+                            sel_s_id_real = current_sub_id
+                            
+                    with st.form(key=f"form_edit_{q_id}"):
+                        novo_enun = st.text_area("Enunciado", row.get('enunciado', ''), height=100)
                         
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        btn_salvar = st.form_submit_button("Salvar Edições e Validar")
-                    with col2:
-                        btn_remover = st.form_submit_button("🗑️ Remover Questão (Invalidar)")
+                        colA, colB = st.columns(2)
+                        with colA:
+                            nova_a = st.text_input("Alternativa A", row.get('alternativa_a', '') or '')
+                            nova_b = st.text_input("Alternativa B", row.get('alternativa_b', '') or '')
+                            nova_c = st.text_input("Alternativa C", row.get('alternativa_c', '') or '')
+                        with colB:
+                            nova_d = st.text_input("Alternativa D", row.get('alternativa_d', '') or '')
+                            nova_e = st.text_input("Alternativa E", row.get('alternativa_e', '') or '')
+                            novo_gab = st.text_input("Gabarito Correto (A, B, C, D ou E)", row.get('gabarito', '') or '')
+                            
+                        # CONTROLE DE ADMIN VISUAL
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            btn_salvar = st.form_submit_button("Salvar Edições e Validar")
                         
-                    if btn_salvar:
-                        conn = sqlite3.connect(DB_PATH)
-                        conn.execute('''UPDATE questoes SET 
-                            enunciado=?, alternativa_a=?, alternativa_b=?, alternativa_c=?, alternativa_d=?, alternativa_e=?, gabarito=?, subgrupo_id=?, valida=1
-                            WHERE id=?''', (novo_enun, nova_a, nova_b, nova_c, nova_d, nova_e, novo_gab, int(sel_s_id_real), q_id))
-                        conn.commit()
-                        conn.close()
-                        
-                        # Atualiza localmente para refletir caso abra o expander de novo sem resquisar
-                        st.session_state.gerenciador_results.at[idx, 'subgrupo_id'] = int(sel_s_id_real)
-                        st.session_state.gerenciador_results.at[idx, 'enunciado'] = novo_enun
-                        
-                        st.success("Questão salva e validada! Pesquise novamente para atualizar a lista.")
-                        
-                    if btn_remover:
-                        conn = sqlite3.connect(DB_PATH)
-                        conn.execute("UPDATE questoes SET valida = -1 WHERE id = ?", (q_id,))
-                        conn.commit()
-                        conn.close()
-                        st.warning("Questão invalidada! Pesquise novamente para atualizar a lista.")
-    
-    
+                        btn_remover = False
+                        if is_admin:
+                            with col2:
+                                btn_remover = st.form_submit_button("🗑️ Remover Questão (Invalidar)")
+                            
+                        if btn_salvar:
+                            update_data = {
+                                "enunciado": novo_enun,
+                                "alternativa_a": nova_a,
+                                "alternativa_b": nova_b,
+                                "alternativa_c": nova_c,
+                                "alternativa_d": nova_d,
+                                "alternativa_e": nova_e,
+                                "gabarito": novo_gab,
+                                "item_id": int(sel_s_id_real),
+                                "valida": 1
+                            }
+                            supabase.table("questoes").update(update_data).eq("id", q_id).execute()
+                            
+                            st.session_state.gerenciador_results.at[idx, 'subgrupo_id'] = int(sel_s_id_real)
+                            st.session_state.gerenciador_results.at[idx, 'enunciado'] = novo_enun
+                            
+                            st.success("Questão salva e validada! Pesquise novamente para atualizar a lista.")
+                            
+                        if btn_remover:
+                            supabase.table("questoes").update({"valida": -1}).eq("id", q_id).execute()
+                            st.warning("Questão invalidada! Pesquise novamente para atualizar a lista.")

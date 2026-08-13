@@ -1,12 +1,21 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
 import json
 import time
 import os
 import datetime
+import sqlite3
+from backend.db import get_supabase
 
-def render(DB_PATH):
+def render(DB_PATH=None):
+    supabase = get_supabase()
+    user = st.session_state.get("user")
+    if not user:
+        st.error("Você precisa estar logado para acessar seu cronograma.")
+        return
+        
+    is_admin = (user.email == "cydy.potter@gmail.com")
+        
     st.header("Plano de Operações Diárias (POD) 🎯")
     col1, col2 = st.columns([8, 2])
     with col1:
@@ -16,11 +25,10 @@ def render(DB_PATH):
             if "plano_diario" in st.session_state: del st.session_state["plano_diario"]
             st.rerun()
             
-    import json
     from backend.scheduler import montar_plano_diario, gravar_resumo, get_resumo, processar_resposta
     
     if "plano_diario" not in st.session_state:
-        st.session_state["plano_diario"] = montar_plano_diario()
+        st.session_state["plano_diario"] = montar_plano_diario(user.id)
         
     lista_novos, lista_revs = st.session_state["plano_diario"]
     
@@ -35,9 +43,9 @@ def render(DB_PATH):
     
     for item in lista_novos:
         grupo = item['grupo_nome']
-        subgrupo = item['subgrupo_nome']
-        sid = item['subgrupo_id']
-        idx = f"novo_{sid}"
+        subgrupo = item['item_nome']
+        iid = item['item_id']
+        idx = f"novo_{iid}"
         
         with st.expander(f"🆕 [NOVO] {grupo} - {subgrupo}", expanded=False):
             st.markdown(f"**Status Atual:** {item['status']}")
@@ -72,19 +80,9 @@ def render(DB_PATH):
                             conn_estudo2.close()
                             st.rerun()
                 
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    if st.button("Concluir Leitura (Ir para Active Recall)", key=f"btn_ler_{idx}"):
-                        st.session_state[k_fase] = "recall"
-                        st.rerun()
-                with col2:
-                    if st.button("🚫 Ignorar Tópico (Não cairá na prova)", key=f"btn_ignorar_{idx}"):
-                        conn = sqlite3.connect(DB_PATH, timeout=15)
-                        conn.execute("UPDATE aprendizado_subgrupo SET status = 'IGNORADO' WHERE subgrupo_id = ?", (sid,))
-                        conn.commit()
-                        conn.close()
-                        if "plano_diario" in st.session_state: del st.session_state["plano_diario"]
-                        st.rerun()
+                if st.button("Concluir Leitura (Ir para Active Recall)", key=f"btn_ler_{idx}"):
+                    st.session_state[k_fase] = "recall"
+                    st.rerun()
             
             # --- FASE ACTIVE RECALL ---
             elif st.session_state[k_fase] == "recall":
@@ -99,7 +97,7 @@ def render(DB_PATH):
                 st.info("📝 **Mini Resumo**: Resuma este assunto em no máximo cinco bullets para as futuras revisões.")
                 bullets = st.text_area("Escreva seus bullets (usaremos nas revisões espaçadas):", key=f"txt_bullets_{idx}", height=100)
                 if st.button("Gravar Resumo e Ir para Questões", key=f"btn_bullets_{idx}"):
-                    gravar_resumo(sid, bullets)
+                    gravar_resumo(user.id, iid, bullets)
                     st.session_state[k_fase] = "questoes"
                     st.success("Resumo gravado com sucesso!")
                     st.rerun()
@@ -111,11 +109,17 @@ def render(DB_PATH):
                 k_resp = f"resp_{idx}"
                 
                 if k_q not in st.session_state:
-                    conn = sqlite3.connect(DB_PATH, timeout=15)
-                    df_q = pd.read_sql_query(f"SELECT * FROM questoes WHERE subgrupo_id = {sid} AND (valida IS NULL OR valida != 0) AND id NOT IN (SELECT questao_id FROM respostas) ORDER BY RANDOM() LIMIT 1", conn)
-                    conn.close()
-                    if not df_q.empty:
-                        row_q = df_q.iloc[0]
+                    # Fetch answered qs
+                    resp_hist = supabase.table("respostas").select("questao_id").eq("user_id", user.id).execute().data
+                    answered = set(r["questao_id"] for r in resp_hist)
+                    
+                    # Fetch active qs
+                    todas = supabase.table("questoes").select("*").eq("item_id", iid).gte("valida", 0).execute().data
+                    validas = [q for q in todas if q["id"] not in answered]
+                    
+                    if validas:
+                        import random
+                        row_q = random.choice(validas)
                         alt_dict = {
                             "A": row_q.get('alternativa_a', 'N/A'),
                             "B": row_q.get('alternativa_b', 'N/A'),
@@ -125,9 +129,9 @@ def render(DB_PATH):
                         }
                         q_json = {
                             "id": int(row_q['id']),
-                            "enunciado": row_q['enunciado'],
+                            "enunciado": row_q.get('enunciado', ''),
                             "alternativas": alt_dict,
-                            "gabarito": row_q.get('gabarito', row_q.get('correta', 'A')),
+                            "gabarito": row_q.get('gabarito', 'A'),
                             "banca": row_q.get('banca', 'N/A')
                         }
                         st.session_state[k_q] = q_json
@@ -151,7 +155,9 @@ def render(DB_PATH):
                         with col2:
                             btn_mentoria_antes = st.button("Mentoria (Ajude-me a pensar)", key=f"btn_mentoria_antes_{idx}")
                         with col3:
-                            btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_antes_{idx}")
+                            btn_rem = False
+                            if is_admin:
+                                btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_antes_{idx}")
                             
                         if btn_mentoria_antes:
                             from backend.llm import mentoria_ia
@@ -159,42 +165,38 @@ def render(DB_PATH):
                                 st.info(mentoria_ia(q_json['enunciado'], opts, choice[0] if choice else None))
                         
                         if btn_rem:
-                            conn = sqlite3.connect(DB_PATH, timeout=15)
-                            conn.execute("UPDATE questoes SET valida = -1 WHERE id = ?", (q_json['id'],))
-                            conn.commit()
-                            conn.close()
+                            supabase.table("questoes").update({"valida": -1}).eq("id", q_json['id']).execute()
                             del st.session_state[k_q]
                             st.warning("Questão invalidada do banco de dados com sucesso!")
                             st.rerun()
                             
-                        if q_json.get('gabarito') in ['N/A', 'None'] or not q_json.get('gabarito'):
+                        gab_correto = str(q_json.get('gabarito', '')).strip().upper()
+                        if gab_correto in ['N/A', 'NONE', '']:
                             st.info("⚠️ O gabarito desta questão não pôde ser lido do PDF. Quando você responder, a IA deduzirá a alternativa correta e a salvará no banco permanentemente.")
     
                         if btn_resp:
                             if choice:
-                                if q_json.get('gabarito') in ['N/A', 'None'] or not q_json.get('gabarito'):
+                                if gab_correto in ['N/A', 'NONE', '']:
                                     from backend.llm import resolver_gabarito_ia
                                     with st.spinner("🧠 IA resolvendo a questão para descobrir o gabarito..."):
                                         novo_gab = resolver_gabarito_ia(q_json['enunciado'], q_json['alternativas'])
-                                        conn = sqlite3.connect(DB_PATH, timeout=15)
-                                        conn.execute("UPDATE questoes SET gabarito = ? WHERE id = ?", (novo_gab, q_json['id']))
-                                        conn.commit()
-                                        conn.close()
+                                        supabase.table("questoes").update({"gabarito": novo_gab}).eq("id", q_json['id']).execute()
                                         q_json['gabarito'] = novo_gab
+                                        gab_correto = novo_gab
                                         st.session_state[k_q] = q_json
     
                                 l_choice = choice[0]
-                                acertou = (str(l_choice).strip().upper() == str(q_json.get('gabarito', '')).strip().upper())
+                                acertou = (str(l_choice).strip().upper() == gab_correto)
                                 
-                                # Grava no DB de respostas legacy
-                                conn = sqlite3.connect(DB_PATH, timeout=15)
-                                conn.execute("UPDATE questoes SET valida = 1 WHERE id = ?", (q_json['id'],))
-                                conn.execute("INSERT INTO respostas (questao_id, acertou, tempo_segundos) VALUES (?, ?, ?)", (q_json['id'], bool(acertou), 0))
-                                conn.commit()
-                                conn.close()
+                                supabase.table("questoes").update({"valida": 1}).eq("id", q_json['id']).execute()
+                                supabase.table("respostas").insert({
+                                    "user_id": user.id,
+                                    "questao_id": q_json['id'],
+                                    "acertou": bool(acertou),
+                                    "tempo_segundos": 0
+                                }).execute()
                                 
-                                # Processa na engine AMV 2.0
-                                processar_resposta(q_json['id'], acertou)
+                                processar_resposta(user.id, q_json['id'], acertou)
                                 
                                 st.session_state[k_resp] = {"acertou": acertou, "gabarito": q_json['gabarito'], "letra": l_choice}
                                 st.rerun()
@@ -213,7 +215,9 @@ def render(DB_PATH):
                         with col_d2:
                             btn_mentoria = st.button("Mentoria (Ajude-me a pensar)", key=f"btn_analise_{idx}")
                         with col_d3:
-                            btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_depois_{idx}")
+                            btn_rem = False
+                            if is_admin:
+                                btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_depois_{idx}")
                             
                         if btn_mentoria:
                             from backend.llm import mentoria_ia
@@ -227,10 +231,7 @@ def render(DB_PATH):
                             st.rerun()
                             
                         if btn_rem:
-                            conn = sqlite3.connect(DB_PATH, timeout=15)
-                            conn.execute("UPDATE questoes SET valida = -1 WHERE id = ?", (q_json['id'],))
-                            conn.commit()
-                            conn.close()
+                            supabase.table("questoes").update({"valida": -1}).eq("id", q_json['id']).execute()
                             del st.session_state[k_q]
                             del st.session_state[k_resp]
                             st.warning("Questão invalidada do banco de dados com sucesso!")
@@ -242,13 +243,20 @@ def render(DB_PATH):
                             from backend.llm import gerar_questao_inedita
                             nova_q = gerar_questao_inedita(grupo, subgrupo)
                             if nova_q:
-                                conn = sqlite3.connect(DB_PATH, timeout=15)
-                                cur = conn.cursor()
                                 alts = nova_q.get('alternativas', {})
-                                cur.execute("INSERT INTO questoes (subgrupo_id, banca, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e, gabarito, valida) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)", 
-                                            (sid, "IA-Gerada", nova_q.get('enunciado', ''), alts.get("A", "N/A"), alts.get("B", "N/A"), alts.get("C", "N/A"), alts.get("D", "N/A"), alts.get("E", "N/A"), nova_q.get('gabarito', 'A')))
-                                conn.commit()
-                                conn.close()
+                                nova_questao = {
+                                    "item_id": int(iid),
+                                    "banca": "IA-Gerada",
+                                    "enunciado": nova_q.get('enunciado', ''),
+                                    "alternativa_a": alts.get("A", "N/A"),
+                                    "alternativa_b": alts.get("B", "N/A"),
+                                    "alternativa_c": alts.get("C", "N/A"),
+                                    "alternativa_d": alts.get("D", "N/A"),
+                                    "alternativa_e": alts.get("E", "N/A"),
+                                    "gabarito": nova_q.get('gabarito', 'A'),
+                                    "valida": 1
+                                }
+                                supabase.table("questoes").insert(nova_questao).execute()
                                 if k_q in st.session_state: del st.session_state[k_q]
                                 st.rerun()
     
@@ -263,19 +271,19 @@ def render(DB_PATH):
         
     for item in lista_revs:
         grupo = item['grupo_nome']
-        subgrupo = item['subgrupo_nome']
-        sid = item['subgrupo_id']
-        idx = f"rev_{sid}"
+        subgrupo = item['item_nome']
+        iid = item['item_id']
+        idx = f"rev_{iid}"
         
         with st.expander(f"🔄 [REVISAR] {grupo} - {subgrupo}", expanded=False):
-            st.markdown(f"**Status:** {item['status']} | **Prioridade:** {item['prioridade']:.1f} | **Nível de Domínio:** {item['nivel_dominio']}%")
+            st.markdown(f"**Status:** {item['status']} | **Prioridade:** {item.get('prioridade', 0):.1f} | **Nível de Domínio:** {item.get('nivel_dominio', 0)}%")
             
             k_rev_fase = f"rev_fase_{idx}"
             if k_rev_fase not in st.session_state:
                 st.session_state[k_rev_fase] = "resumo"
                 
             if st.session_state[k_rev_fase] == "resumo":
-                resumo = get_resumo(sid)
+                resumo = get_resumo(user.id, iid)
                 if resumo:
                     st.info("**Seus Bullets de Revisão:**\n" + resumo)
                 else:
@@ -310,11 +318,14 @@ def render(DB_PATH):
                 k_resp = f"resp_{idx}"
                 
                 if k_q not in st.session_state:
-                    conn = sqlite3.connect(DB_PATH, timeout=15)
-                    df_q = pd.read_sql_query(f"SELECT * FROM questoes WHERE subgrupo_id = {sid} AND (valida IS NULL OR valida != 0) AND id NOT IN (SELECT questao_id FROM respostas) ORDER BY RANDOM() LIMIT 1", conn)
-                    conn.close()
-                    if not df_q.empty:
-                        row_q = df_q.iloc[0]
+                    resp_hist = supabase.table("respostas").select("questao_id").eq("user_id", user.id).execute().data
+                    answered = set(r["questao_id"] for r in resp_hist)
+                    todas = supabase.table("questoes").select("*").eq("item_id", iid).gte("valida", 0).execute().data
+                    validas = [q for q in todas if q["id"] not in answered]
+                    
+                    if validas:
+                        import random
+                        row_q = random.choice(validas)
                         alt_dict = {
                             "A": row_q.get('alternativa_a', 'N/A'),
                             "B": row_q.get('alternativa_b', 'N/A'),
@@ -324,9 +335,9 @@ def render(DB_PATH):
                         }
                         q_json = {
                             "id": int(row_q['id']),
-                            "enunciado": row_q['enunciado'],
+                            "enunciado": row_q.get('enunciado', ''),
                             "alternativas": alt_dict,
-                            "gabarito": row_q.get('gabarito', row_q.get('correta', 'A')),
+                            "gabarito": row_q.get('gabarito', 'A'),
                             "banca": row_q.get('banca', 'N/A')
                         }
                         st.session_state[k_q] = q_json
@@ -350,7 +361,9 @@ def render(DB_PATH):
                         with col2:
                             btn_mentoria_antes = st.button("Mentoria (Ajude-me a pensar)", key=f"btn_mentoria_antes_{idx}")
                         with col3:
-                            btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_antes_{idx}")
+                            btn_rem = False
+                            if is_admin:
+                                btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_antes_{idx}")
                             
                         if btn_mentoria_antes:
                             from backend.llm import mentoria_ia
@@ -358,40 +371,38 @@ def render(DB_PATH):
                                 st.info(mentoria_ia(q_json['enunciado'], opts, choice[0] if choice else None))
                         
                         if btn_rem:
-                            conn = sqlite3.connect(DB_PATH, timeout=15)
-                            conn.execute("UPDATE questoes SET valida = -1 WHERE id = ?", (q_json['id'],))
-                            conn.commit()
-                            conn.close()
+                            supabase.table("questoes").update({"valida": -1}).eq("id", q_json['id']).execute()
                             del st.session_state[k_q]
                             st.warning("Questão invalidada do banco de dados com sucesso!")
                             st.rerun()
                             
-                        if q_json.get('gabarito') == 'N/A' or not q_json.get('gabarito'):
+                        gab_correto = str(q_json.get('gabarito', '')).strip().upper()
+                        if gab_correto in ['N/A', 'NONE', '']:
                             st.info("⚠️ O gabarito desta questão não pôde ser lido do PDF. Quando você responder, a IA deduzirá a alternativa correta e a salvará no banco permanentemente.")
     
                         if btn_resp:
                             if choice:
-                                if q_json.get('gabarito') == 'N/A' or not q_json.get('gabarito'):
+                                if gab_correto in ['N/A', 'NONE', '']:
                                     from backend.llm import resolver_gabarito_ia
                                     with st.spinner("🧠 IA resolvendo a questão para descobrir o gabarito..."):
                                         novo_gab = resolver_gabarito_ia(q_json['enunciado'], q_json['alternativas'])
-                                        conn = sqlite3.connect(DB_PATH, timeout=15)
-                                        conn.execute("UPDATE questoes SET gabarito = ? WHERE id = ?", (novo_gab, q_json['id']))
-                                        conn.commit()
-                                        conn.close()
+                                        supabase.table("questoes").update({"gabarito": novo_gab}).eq("id", q_json['id']).execute()
                                         q_json['gabarito'] = novo_gab
+                                        gab_correto = novo_gab
                                         st.session_state[k_q] = q_json
     
                                 l_choice = choice[0]
-                                acertou = (str(l_choice).strip().upper() == str(q_json.get('gabarito', '')).strip().upper())
+                                acertou = (str(l_choice).strip().upper() == gab_correto)
                                 
-                                conn = sqlite3.connect(DB_PATH, timeout=15)
-                                conn.execute("UPDATE questoes SET valida = 1 WHERE id = ?", (q_json['id'],))
-                                conn.execute("INSERT INTO respostas (questao_id, acertou, tempo_segundos) VALUES (?, ?, ?)", (q_json['id'], bool(acertou), 0))
-                                conn.commit()
-                                conn.close()
+                                supabase.table("questoes").update({"valida": 1}).eq("id", q_json['id']).execute()
+                                supabase.table("respostas").insert({
+                                    "user_id": user.id,
+                                    "questao_id": q_json['id'],
+                                    "acertou": bool(acertou),
+                                    "tempo_segundos": 0
+                                }).execute()
                                 
-                                processar_resposta(q_json['id'], acertou)
+                                processar_resposta(user.id, q_json['id'], acertou)
                                 
                                 st.session_state[k_resp] = {"acertou": acertou, "gabarito": q_json['gabarito'], "letra": l_choice}
                                 st.rerun()
@@ -410,7 +421,9 @@ def render(DB_PATH):
                         with col_d2:
                             btn_mentoria = st.button("Mentoria (Ajude-me a pensar)", key=f"btn_analise_{idx}")
                         with col_d3:
-                            btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_depois_{idx}")
+                            btn_rem = False
+                            if is_admin:
+                                btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_depois_{idx}")
                             
                         if btn_mentoria:
                             from backend.llm import mentoria_ia
@@ -424,10 +437,7 @@ def render(DB_PATH):
                             st.rerun()
                             
                         if btn_rem:
-                            conn = sqlite3.connect(DB_PATH, timeout=15)
-                            conn.execute("UPDATE questoes SET valida = -1 WHERE id = ?", (q_json['id'],))
-                            conn.commit()
-                            conn.close()
+                            supabase.table("questoes").update({"valida": -1}).eq("id", q_json['id']).execute()
                             del st.session_state[k_q]
                             del st.session_state[k_resp]
                             st.warning("Questão invalidada do banco de dados com sucesso!")
@@ -439,18 +449,23 @@ def render(DB_PATH):
                             from backend.llm import gerar_questao_inedita
                             nova_q = gerar_questao_inedita(grupo, subgrupo)
                             if nova_q:
-                                conn = sqlite3.connect(DB_PATH, timeout=15)
-                                cur = conn.cursor()
                                 alts = nova_q.get('alternativas', {})
-                                cur.execute("INSERT INTO questoes (subgrupo_id, banca, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e, gabarito, valida) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)", 
-                                            (sid, "IA-Gerada", nova_q.get('enunciado', ''), alts.get("A", "N/A"), alts.get("B", "N/A"), alts.get("C", "N/A"), alts.get("D", "N/A"), alts.get("E", "N/A"), nova_q.get('gabarito', 'A')))
-                                conn.commit()
-                                conn.close()
+                                nova_questao = {
+                                    "item_id": int(iid),
+                                    "banca": "IA-Gerada",
+                                    "enunciado": nova_q.get('enunciado', ''),
+                                    "alternativa_a": alts.get("A", "N/A"),
+                                    "alternativa_b": alts.get("B", "N/A"),
+                                    "alternativa_c": alts.get("C", "N/A"),
+                                    "alternativa_d": alts.get("D", "N/A"),
+                                    "alternativa_e": alts.get("E", "N/A"),
+                                    "gabarito": nova_q.get('gabarito', 'A'),
+                                    "valida": 1
+                                }
+                                supabase.table("questoes").insert(nova_questao).execute()
                                 if k_q in st.session_state: del st.session_state[k_q]
                                 st.rerun()
                                 
     st.markdown("---")
     st.subheader("Bloco 4: Modo Prova")
     st.info("Após concluir a apreensão de novos temas e as revisões pendentes, vá para a aba **Modo Prova** para o treinamento misto de resistência!")
-    
-    

@@ -1,6 +1,27 @@
-.env
+# Arquivos de Sistema e Cache Python
 venv/
 __pycache__/
 *.pyc
 .DS_Store
-data/bancos/simulado_estado.json
+
+# Variáveis de Ambiente e Chaves
+.env
+
+# Scripts temporários e de manutenção
+refactor*.py
+verificar_supa*.py
+check_count_supa*.py
+script_parse_edital.py
+
+# Arquivos de Sessão e Estado do Simulador
+data/bancos/session_local.json
+data/bancos/simulado_estado*.json
+data/bancos/cookies.json
+
+# Bancos de Dados Locais Antigos e Backups
+# Como algumas abas (Cronograma, Diagnóstico) ainda podem usar o DB_PATH local,
+# estamos permitindo apenas o 'db_novo.sqlite' e 'conteudo_estudo.sqlite' subirem pro Github.
+data/bancos/db.sqlite
+data/bancos/db_backup*.sqlite
+data/bancos/banco_questoes.sqlite
+data/bancos/questoes_estudegratis.db

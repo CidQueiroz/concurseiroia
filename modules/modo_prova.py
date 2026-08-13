@@ -1,16 +1,27 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
 import json
 import time
 import os
 import datetime
+import random
+from backend.db import get_supabase
 
-def render(DB_PATH):
+def render(DB_PATH=None):
+    supabase = get_supabase()
+    user = st.session_state.get("user")
+    if not user:
+        st.error("Você precisa estar logado para acessar o Modo Prova.")
+        return
+        
+    is_admin = (user.email == "cydy.potter@gmail.com")
+
     st.header("Modo Prova 📝")
     
-    import json
-    STATE_FILE = "data/bancos/simulado_estado.json"
+    # Em vez de salvar arquivo local, usaremos state em memória ou um state file por user_id. 
+    # Para o MVP do Supabase, session_state é suficiente, mas se o arquivo for necessário:
+    STATE_FILE = f"data/bancos/simulado_estado_{user.id}.json"
+    os.makedirs("data/bancos", exist_ok=True)
     
     def salvar_estado_simulado():
         if not st.session_state.get('prova_em_andamento'): return
@@ -19,7 +30,6 @@ def render(DB_PATH):
             "questao_idx": st.session_state.questao_idx,
             "prova_respondido": st.session_state.get("prova_respondido", False),
             "prova_acertou": st.session_state.get("prova_acertou", False),
-            
             "prova_chat_history": st.session_state.get("prova_chat_history", []),
             "prova_score_basic": st.session_state.get("prova_score_basic", 0.0),
             "prova_score_esp": st.session_state.get("prova_score_esp", 0.0),
@@ -28,7 +38,6 @@ def render(DB_PATH):
         with open(STATE_FILE, "w") as f:
             json.dump(estado, f)
             
-    # Checar se existe simulado salvo
     if os.path.exists(STATE_FILE) and not st.session_state.get('prova_em_andamento'):
         st.info("Você tem um simulado em andamento!")
         if st.button("Continuar Simulado Salvo", type="primary"):
@@ -38,7 +47,6 @@ def render(DB_PATH):
             st.session_state.questao_idx = estado["questao_idx"]
             st.session_state.prova_respondido = estado["prova_respondido"]
             st.session_state.prova_acertou = estado.get("prova_acertou", False)
-            
             st.session_state.prova_chat_history = estado.get("prova_chat_history", [])
             st.session_state.prova_score_basic = estado.get("prova_score_basic", 0.0)
             st.session_state.prova_score_esp = estado.get("prova_score_esp", 0.0)
@@ -46,34 +54,31 @@ def render(DB_PATH):
             st.session_state.prova_em_andamento = True
             st.rerun()
             
-    modo_prova = st.radio("Escolha a modalidade:", ["Prova por Tema", "Simulado Geral DATAPREV"], horizontal=True)
+    modo_prova = "Prova por Tema"
     
-    from backend.database.queries import query_grupos_distintos
-    conn = sqlite3.connect(DB_PATH, timeout=15)
-    df_temas = pd.read_sql_query(query_grupos_distintos(), conn)
+    # Carregar Grupos do Supabase
+    grupos_resp = supabase.table("grupos").select("nome").execute().data
+    df_temas = pd.DataFrame(grupos_resp)
     
     tema_selecionado = None
     subgrupos_selecionados = []
+    
     if modo_prova == "Prova por Tema":
         if not df_temas.empty:
             tema_selecionado = st.selectbox("Selecione o Tema:", df_temas['nome'].tolist())
             
-            # Lê o mapa mental para pegar os subgrupos
-            try:
-                with open('data/resumos/mapa_mental.json', 'r', encoding='utf-8') as f:
-                    mapa_mental = json.load(f)
-                
-                subgrupos_opcoes = []
-                for item in mapa_mental.get('conteudo', []):
-                    if item.get('grupo', '').strip() == tema_selecionado:
-                        subgrupos_opcoes = [s.strip() for s in item.get('subgrupos', [])]
-                        break
-                        
-                if subgrupos_opcoes:
-                    subgrupos_selecionados = st.multiselect("Selecione os Subgrupos (Deixe vazio para ver todos):", subgrupos_opcoes)
-            except Exception:
-                pass
-                
+            # Carrega subgrupos dinamicamente do BD
+            resp_sub = supabase.table("subgrupos").select("nome, grupos!inner(nome)").eq("grupos.nome", tema_selecionado).execute()
+            subgrupos_opcoes = [s["nome"] for s in resp_sub.data]
+            
+            itens_selecionados = []
+            if subgrupos_opcoes:
+                subgrupos_selecionados = st.multiselect("Selecione os Subgrupos (Deixe vazio para ver todos):", subgrupos_opcoes)
+                if subgrupos_selecionados:
+                    resp_itens = supabase.table("itens_estudo").select("nome, subgrupos!inner(nome)").in_("subgrupos.nome", subgrupos_selecionados).execute()
+                    itens_opcoes = [i["nome"] for i in resp_itens.data]
+                    if itens_opcoes:
+                        itens_selecionados = st.multiselect("Selecione os Itens de Estudo (Deixe vazio para ver todos):", itens_opcoes)
         else:
             st.warning("Nenhuma questão no banco de dados.")
             
@@ -85,23 +90,29 @@ def render(DB_PATH):
         if st.button("✨ Gerar Questão Inédita com IA para os temas selecionados", key="btn_gerar_ia_prova"):
             with st.spinner(f"Gerando questão inédita de {tema_selecionado}..."):
                 from backend.llm import gerar_questao_inedita
-                import random
-                # Choose a subgroup randomly if multiple selected, otherwise use a generic term
                 sub_escolhido = random.choice(subgrupos_selecionados) if subgrupos_selecionados else "Assuntos Gerais"
                 nova_q = gerar_questao_inedita(tema_selecionado, sub_escolhido)
                 if nova_q:
                     from modules.gerenciador import get_subgrupo_id
-                    s_id = get_subgrupo_id(tema_selecionado, sub_escolhido, DB_PATH)
+                    s_id = get_subgrupo_id(tema_selecionado, sub_escolhido)
                     
-                    conn_ia = sqlite3.connect(DB_PATH, timeout=15)
-                    cur_ia = conn_ia.cursor()
                     alts = nova_q.get('alternativas', {})
                     if not alts:
                         alts = {"A": nova_q.get('a', 'N/A'), "B": nova_q.get('b', 'N/A'), "C": nova_q.get('c', 'N/A'), "D": nova_q.get('d', 'N/A'), "E": nova_q.get('e', 'N/A')}
-                    cur_ia.execute("INSERT INTO questoes (subgrupo_id, banca, enunciado, alternativa_a, alternativa_b, alternativa_c, alternativa_d, alternativa_e, gabarito, valida) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)", 
-                                (s_id, "IA-Gerada", nova_q.get('enunciado', ''), alts.get("A", "N/A"), alts.get("B", "N/A"), alts.get("C", "N/A"), alts.get("D", "N/A"), alts.get("E", "N/A"), nova_q.get('gabarito', 'A')))
-                    conn_ia.commit()
-                    conn_ia.close()
+                        
+                    nova_questao = {
+                        "item_id": int(s_id),
+                        "banca": "IA-Gerada",
+                        "enunciado": nova_q.get('enunciado', ''),
+                        "alternativa_a": alts.get("A", "N/A"),
+                        "alternativa_b": alts.get("B", "N/A"),
+                        "alternativa_c": alts.get("C", "N/A"),
+                        "alternativa_d": alts.get("D", "N/A"),
+                        "alternativa_e": alts.get("E", "N/A"),
+                        "gabarito": nova_q.get('gabarito', 'A'),
+                        "valida": 1
+                    }
+                    supabase.table("questoes").insert(nova_questao).execute()
                     st.success(f"Questão gerada e adicionada ao banco com sucesso! (Tema: {tema_selecionado} - {sub_escolhido}). Clique em 'Iniciar Novo Simulado' para respondê-la.")
                 else:
                     st.error("Falha ao gerar questão. Verifique suas chaves de API (BYOK) ou o console.")
@@ -117,7 +128,41 @@ def render(DB_PATH):
             if os.path.exists(STATE_FILE):
                 os.remove(STATE_FILE)
             st.rerun()
-    
+            
+    def carregar_questoes_supabase(tema=None, ineditas=True, subs=None, itens_filtro=None):
+        query = supabase.table("questoes").select("*, itens_estudo!inner(nome, subgrupos!inner(nome, grupos!inner(nome)))")
+        if tema:
+            query = query.eq("itens_estudo.subgrupos.grupos.nome", tema)
+        
+        # O supabase rest client não tem limit() sem order que traga as mais aleatórias de forma barata, então puxamos as válidas
+        # limit(1000)
+        data = query.execute().data
+        
+        if ineditas:
+            # Puxar IDs respondidos por este usuario
+            resp_historico = supabase.table("respostas").select("questao_id").eq("user_id", user.id).execute()
+            respondidas = set([r["questao_id"] for r in resp_historico.data])
+            data = [q for q in data if q["id"] not in respondidas]
+            
+        # Filtrar as invalidadas
+        data = [q for q in data if q.get("valida", 1) >= 0]
+            
+        # Flatten para pandas
+        for q in data:
+            q['item_nome'] = q['itens_estudo']['nome']
+            q['subgrupo_nome'] = q['itens_estudo']['subgrupos']['nome']
+            q['grupo_nome'] = q['itens_estudo']['subgrupos']['grupos']['nome']
+            del q['itens_estudo']
+            
+        df = pd.DataFrame(data)
+        if not df.empty:
+            if subs:
+                df = df[df['subgrupo_nome'].isin(subs)]
+            if itens_filtro:
+                df = df[df['item_nome'].isin(itens_filtro)]
+            
+        return df
+
     if iniciar:
         if os.path.exists(STATE_FILE):
             os.remove(STATE_FILE)
@@ -131,47 +176,15 @@ def render(DB_PATH):
         
         if modo_prova == "Prova por Tema" and tema_selecionado:
             st.session_state.prova_start_time = None
-            from backend.database.queries import query_prova_por_tema
-            df_questoes = pd.read_sql_query(query_prova_por_tema(tema_selecionado, subgrupos_selecionados, ineditas_apenas), conn)
-            df_questoes = df_questoes.drop_duplicates(subset=['enunciado'])
-            st.session_state.df_prova = df_questoes.sample(frac=1).reset_index(drop=True)
-            
-        elif modo_prova == "Simulado Geral DATAPREV":
-            st.session_state.prova_start_time = time.time()
-            from backend.database.queries import query_simulado_geral
-            df_todas = pd.read_sql_query(query_simulado_geral(ineditas_apenas), conn)
-            df_todas = df_todas.drop_duplicates(subset=['enunciado'])
-            
-            dist = {
-                "LÍNGUA PORTUGUESA": 12,
-                "LÍNGUA INGLESA": 12,
-                "RACIOCÍNIO LÓGICO MATEMÁTICO": 5,
-                "ATUALIDADES E INTELIGÊNCIA ARTIFICIAL": 6,
-                "LEGISLAÇÃO, SEGURANÇA E PROTEÇÃO DE DADOS": 5
-            }
-            
-            dfs = []
-            for d_nome, d_qtd in dist.items():
-                df_cat = df_todas[df_todas['grupo_nome'] == d_nome]
-                n_sample = min(len(df_cat), d_qtd)
-                if n_sample > 0:
-                    dfs.append(df_cat.sample(n_sample))
+            df_questoes = carregar_questoes_supabase(tema_selecionado, ineditas_apenas, subgrupos_selecionados, itens_selecionados)
+            if not df_questoes.empty:
+                df_questoes = df_questoes.drop_duplicates(subset=['enunciado'])
+                st.session_state.df_prova = df_questoes.sample(frac=1).reset_index(drop=True).head(200) # limite de 200 pro front
+            else:
+                st.session_state.df_prova = pd.DataFrame()
                     
-            df_esp = df_todas[~df_todas['grupo_nome'].isin(dist.keys())]
-            n_esp = min(len(df_esp), 30)
-            if n_esp > 0:
-                dfs.append(df_esp.sample(n_esp))
-                
-                if dfs:
-                    df_simulado = pd.concat(dfs).sample(frac=1).reset_index(drop=True)
-                    st.session_state.df_prova = df_simulado
-                else:
-                    st.session_state.df_prova = pd.DataFrame()
-                    
-            salvar_estado_simulado()
+        salvar_estado_simulado()
             
-    conn.close()
-    
     if st.session_state.get('prova_em_andamento') and 'df_prova' in st.session_state:
         df_prova = st.session_state.df_prova
         
@@ -189,9 +202,8 @@ def render(DB_PATH):
             if idx < len(df_prova):
                 q = df_prova.iloc[idx]
                 respondido = st.session_state.get("prova_respondido", False)
-                is_basic = str(q['grupo_nome']).strip().upper() in dist_basics
-                peso = 1.0 if is_basic else 2.5
-                
+                is_basic = str(q.get('grupo_nome', '')).strip().upper() in dist_basics
+                peso = 1.0
                 
                 if st.session_state.get('prova_start_time'):
                     elapsed = int(time.time() - st.session_state.prova_start_time)
@@ -201,15 +213,13 @@ def render(DB_PATH):
                 st.markdown("---")
                 banca_str = q.get('banca', 'N/A')
                 ano_raw = q.get('ano', 'N/A')
-                import math
                 if pd.isna(ano_raw) or ano_raw == 'N/A':
                     ano_str = 'N/A'
                 else:
                     ano_str = str(int(ano_raw)) if isinstance(ano_raw, (float, int)) else str(ano_raw)
-                st.caption(f"Questão {idx + 1} de {len(df_prova)} | Tema: {q['grupo_nome']} | Banca: {banca_str} | Ano: {ano_str} | Peso: {peso}")
-                st.markdown(f"**{q['enunciado']}**")
+                st.caption(f"Questão {idx + 1} de {len(df_prova)} | Tema: {q.get('grupo_nome', '')} | Banca: {banca_str} | Ano: {ano_str} | Peso: {peso}")
+                st.markdown(f"**{q.get('enunciado', '')}**")
                 
-                # Parse alternativas if it's a string
                 alt = q.get('alternativas', '')
                 opcoes = {}
                 if isinstance(alt, str) and alt.startswith('{'):
@@ -229,7 +239,9 @@ def render(DB_PATH):
                     with col_resp2:
                         btn_mentoria_antes = st.button("Mentoria (Ajude-me a pensar)", key=f"btn_mentoria_prova_antes_{idx}")
                     with col_resp3:
-                        btn_remover = st.button("🗑️ Remover Questão", key=f"btn_remover_prova_{idx}")
+                        btn_remover = False
+                        if is_admin:
+                            btn_remover = st.button("🗑️ Remover Questão", key=f"btn_remover_prova_{idx}")
     
                     if btn_mentoria_antes and not st.session_state.get("prova_chat_history"):
                         from backend.llm import mentoria_ia
@@ -258,68 +270,41 @@ def render(DB_PATH):
                             salvar_estado_simulado()
     
                     if btn_remover:
-                        conn = sqlite3.connect(DB_PATH, timeout=15)
-                        conn.execute("UPDATE questoes SET valida = -1 WHERE id = ?", (int(q['id']),))
-                        conn.commit()
-                        
-                        ids_atuais = tuple(st.session_state.df_prova['id'].tolist())
-                        if len(ids_atuais) == 1:
-                            ids_sql = f"({ids_atuais[0]})"
-                        else:
-                            ids_sql = str(ids_atuais)
-                        
-                        df_nova = pd.read_sql_query(f'''
-                            SELECT q.*, s.nome as subgrupo_nome, g.nome as grupo_nome 
-                            FROM questoes q
-                            JOIN subgrupos s ON q.subgrupo_id = s.id
-                            JOIN grupos g ON s.grupo_id = g.id
-                            WHERE g.nome = ? AND (q.valida IS NULL OR q.valida != -1)
-                            AND q.id NOT IN {ids_sql}
-                            ORDER BY RANDOM() LIMIT 1
-                        ''', conn, params=(q['grupo_nome'],))
-                        
-                        if not df_nova.empty:
-                            st.session_state.df_prova.iloc[idx] = df_nova.iloc[0]
-                            st.warning("Questão invalidada! Substituída por uma nova da mesma disciplina.")
-                        else:
-                            st.session_state.questao_idx += 1
-                            st.warning("Questão invalidada! Sem substitutas disponíveis na disciplina. Avançando...")
-                            
-                        conn.close()
+                        supabase.table("questoes").update({"valida": -1}).eq("id", int(q['id'])).execute()
+                        st.session_state.questao_idx += 1
+                        st.warning("Questão invalidada! Avançando para a próxima...")
                         st.session_state.prova_chat_history = []
                         salvar_estado_simulado()
                         st.rerun()
     
                     if btn_responder:
-                        if q.get('gabarito') in ['N/A', 'None'] or not q.get('gabarito'):
+                        gab_correto = str(q.get('gabarito', '')).strip().upper()
+                        if gab_correto in ['N/A', 'NONE', '']:
                             from backend.llm import resolver_gabarito_ia
                             with st.spinner("🧠 IA resolvendo a questão para descobrir o gabarito..."):
                                 novo_gab = resolver_gabarito_ia(q['enunciado'], opcoes)
-                                conn = sqlite3.connect(DB_PATH, timeout=15)
-                                conn.execute("UPDATE questoes SET gabarito = ? WHERE id = ?", (novo_gab, int(q['id'])))
-                                conn.commit()
-                                conn.close()
-                                # Update in memory
+                                supabase.table("questoes").update({"gabarito": novo_gab}).eq("id", int(q['id'])).execute()
                                 st.session_state.df_prova.at[idx, 'gabarito'] = novo_gab
-                                q = st.session_state.df_prova.iloc[idx]
+                                gab_correto = novo_gab
     
-                        acertou = (str(resposta_usuario).strip().upper() == str(q.get('gabarito', '')).strip().upper())
+                        acertou = (str(resposta_usuario).strip().upper() == gab_correto)
                         
                         if acertou:
                             if is_basic:
                                 st.session_state.prova_score_basic += 1.0
                             else:
-                                st.session_state.prova_score_esp += 2.5
+                                st.session_state.prova_score_esp += 1.0
                         
-                        conn = sqlite3.connect(DB_PATH, timeout=15)
-                        cur = conn.cursor()
-                        cur.execute("UPDATE questoes SET valida = 1 WHERE id = ?", (int(q['id']),))
-                        cur.execute("INSERT INTO respostas (questao_id, acertou, tempo_segundos) VALUES (?, ?, ?)", (int(q['id']), bool(acertou), 0))
-                        conn.commit()
+                        supabase.table("questoes").update({"valida": 1}).eq("id", int(q['id'])).execute()
+                        supabase.table("respostas").insert({
+                            "user_id": user.id,
+                            "questao_id": int(q['id']),
+                            "acertou": bool(acertou),
+                            "tempo_segundos": 0
+                        }).execute()
                         
-                        from backend.scheduler import processar_resposta
-                        processar_resposta(int(q['id']), bool(acertou))
-                        conn.close()
+                        # Atualizar stats no banco (pode usar scheduler, mas via supabase python)
+                        # No MVP manteremos simples
                         
                         st.session_state.prova_respondido = True
                         st.session_state.prova_acertou = acertou
@@ -341,7 +326,9 @@ def render(DB_PATH):
                         if not st.session_state.get("prova_chat_history"):
                             btn_mentoria = st.button("Mentoria (Explicar Resposta)", key=f"btn_prova_analisar_{idx}")
                     with col_next3:
-                        btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_depois_prova_{idx}")
+                        btn_rem = False
+                        if is_admin:
+                            btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_depois_prova_{idx}")
                         
                     if btn_mentoria and not st.session_state.get("prova_chat_history"):
                         from backend.llm import explicar_erro
@@ -351,7 +338,7 @@ def render(DB_PATH):
                         st.markdown("### 🧠 Análise do Tutor")
                         with st.chat_message("assistant"):
                             gerador = explicar_erro(
-                                q['enunciado'], 
+                                q.get('enunciado', ''), 
                                 texto_correta, 
                                 texto_marcada, 
                                 st.session_state.prova_acertou,
@@ -377,7 +364,7 @@ def render(DB_PATH):
                             texto_marcada = f"{resposta_usuario}) {opcoes.get(resposta_usuario, 'N/A')}" if resposta_usuario in opcoes else "N/A"
                             with st.chat_message("assistant"):
                                 gerador = explicar_erro(
-                                    q['enunciado'], 
+                                    q.get('enunciado', ''), 
                                     texto_correta, 
                                     texto_marcada, 
                                     st.session_state.prova_acertou,
@@ -397,44 +384,17 @@ def render(DB_PATH):
                         st.rerun()
                         
                     if btn_rem:
-                        conn = sqlite3.connect(DB_PATH, timeout=15)
-                        conn.execute("UPDATE questoes SET valida = -1 WHERE id = ?", (int(q['id']),))
-                        conn.commit()
-                        
-                        # Revert the score if the user answered correctly
+                        supabase.table("questoes").update({"valida": -1}).eq("id", int(q['id'])).execute()
                         if st.session_state.get("prova_acertou"):
                             if is_basic:
                                 st.session_state.prova_score_basic -= 1.0
                             else:
-                                st.session_state.prova_score_esp -= 2.5
-                                
-                        ids_atuais = tuple(st.session_state.df_prova['id'].tolist())
-                        if len(ids_atuais) == 1:
-                            ids_sql = f"({ids_atuais[0]})"
-                        else:
-                            ids_sql = str(ids_atuais)
-                        
-                        df_nova = pd.read_sql_query(f'''
-                            SELECT q.*, s.nome as subgrupo_nome, g.nome as grupo_nome 
-                            FROM questoes q
-                            JOIN subgrupos s ON q.subgrupo_id = s.id
-                            JOIN grupos g ON s.grupo_id = g.id
-                            WHERE g.nome = ? AND (q.valida IS NULL OR q.valida != -1)
-                            AND q.id NOT IN {ids_sql}
-                            ORDER BY RANDOM() LIMIT 1
-                        ''', conn, params=(q['grupo_nome'],))
-                        
-                        if not df_nova.empty:
-                            st.session_state.df_prova.iloc[idx] = df_nova.iloc[0]
-                            st.warning("Questão invalidada! Substituída por uma nova da mesma disciplina.")
-                        else:
-                            st.session_state.questao_idx += 1
-                            st.warning("Questão invalidada! Sem substitutas disponíveis na disciplina. Avançando...")
-                            
-                        conn.close()
+                                st.session_state.prova_score_esp -= 1.0
+                        st.session_state.questao_idx += 1
                         st.session_state.prova_respondido = False
                         st.session_state.prova_acertou = False
                         st.session_state.prova_chat_history = []
+                        st.warning("Questão invalidada! Avançando...")
                         salvar_estado_simulado()
                         st.rerun()
             else:
@@ -451,25 +411,18 @@ def render(DB_PATH):
                     
                 if os.path.exists(STATE_FILE):
                     if st.session_state.get('prova_start_time') and st.session_state.get('df_prova') is not None and len(st.session_state.df_prova) > 30:
-                        # Salvar apenas se for um simulado de verdade (maior q 30 questoes) para nao flodar o grafico com testes
-                        conn_sim = sqlite3.connect(DB_PATH, timeout=15)
-                        conn_sim.execute("INSERT INTO historico_simulados (tempo_segundos, pontuacao_total) VALUES (?, ?)", (total_elapsed, score_total))
-                        conn_sim.commit()
-                        conn_sim.close()
+                        supabase.table("historico_simulados").insert({
+                            "user_id": user.id,
+                            "tempo_segundos": total_elapsed,
+                            "pontuacao_total": score_total
+                        }).execute()
                     os.remove(STATE_FILE)
-                
-                # Exibe a pontuação final apenas se for simulado ou se tiver respondido algo
-                score_basic = st.session_state.get('prova_score_basic', 0.0)
-                score_esp = st.session_state.get('prova_score_esp', 0.0)
-                score_total = score_basic + score_esp
                 
                 st.markdown("### 🏆 Resultado Final do Simulado")
                 colA, colB, colC = st.columns(3)
-                colA.metric("Conhecimentos Básicos", f"{score_basic} / 40.0 pts")
-                colB.metric("Conhecimentos Específicos", f"{score_esp} / 75.0 pts")
-                colC.metric("PONTUAÇÃO TOTAL", f"{score_total} / 115.0 pts")
-                
-                st.progress(score_total / 115.0)
+                colA.metric("Conhecimentos Básicos (Pontos)", f"{score_basic}")
+                colB.metric("Conhecimentos Específicos (Pontos)", f"{score_esp}")
+                colC.metric("PONTUAÇÃO TOTAL", f"{score_total}")
                 
                 if st.button("Fazer Nova Prova"):
                     st.session_state.prova_em_andamento = False
@@ -477,5 +430,3 @@ def render(DB_PATH):
                     st.rerun()
         else:
             st.warning("Não há questões suficientes no banco para este modo. Use a aba Hoje para gerar mais.")
-    
-    

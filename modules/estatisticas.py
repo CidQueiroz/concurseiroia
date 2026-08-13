@@ -1,70 +1,75 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
-import json
-import time
-import os
 import datetime
+from backend.db import get_supabase
 
-def render(DB_PATH):
+def render(DB_PATH=None):
+    supabase = get_supabase()
+    user = st.session_state.get("user")
+    if not user:
+        st.error("Você precisa estar logado para ver as estatísticas.")
+        return
+        
     st.header("Radar do Edital 📊")
     
-    # Progresso do Banco
-    conn_val = sqlite3.connect(DB_PATH, timeout=15)
-    try:
-        cur_val = conn_val.cursor()
-        cur_val.execute("SELECT COUNT(*) FROM questoes WHERE valida = 1")
-        validadas = cur_val.fetchone()[0]
-        cur_val.execute("SELECT COUNT(*) FROM questoes WHERE valida = 0 OR valida IS NULL")
-        nao_validadas = cur_val.fetchone()[0]
-        cur_val.execute("SELECT COUNT(*) FROM questoes WHERE valida = -1")
-        removidas = cur_val.fetchone()[0]
-    except Exception:
-        validadas = nao_validadas = removidas = 0
-    conn_val.close()
+    # 1. Progresso do Banco (Global, não depende do user)
+    total_q = supabase.table("questoes").select("id", count="exact").execute().count or 0
+    validadas = supabase.table("questoes").select("id", count="exact").eq("valida", 1).execute().count or 0
+    removidas = supabase.table("questoes").select("id", count="exact").eq("valida", -1).execute().count or 0
+    nao_validadas = total_q - validadas - removidas
     
     st.subheader("Progresso do Banco de Questões 🗃️")
     colV1, colV2, colV3 = st.columns(3)
-    colV1.metric("Validadas ✅", validadas, help="Questões que você já respondeu ou editou.")
-    colV2.metric("Aguardando Validação ⏳", nao_validadas, help="Questões inéditas no banco.")
+    colV1.metric("Validadas ✅", validadas, help="Questões validadas (com gabarito revisado).")
+    colV2.metric("Aguardando Validação ⏳", nao_validadas, help="Questões inéditas no banco (sem gabarito ou geradas por IA).")
     colV3.metric("Removidas 🗑️", removidas, help="Questões com defeito que foram descartadas.")
     st.markdown("---")
     
+    # 2. Distribuição do Banco
     st.subheader("Distribuição do Banco de Questões 📚")
-    conn_dist = sqlite3.connect(DB_PATH, timeout=15)
-    try:
-        df_dist = pd.read_sql_query("""
-            SELECT g.nome as "Grupo", s.nome as "Subgrupo", COUNT(q.id) as "Quantidade"
-            FROM questoes q
-            LEFT JOIN subgrupos s ON q.subgrupo_id = s.id
-            LEFT JOIN grupos g ON s.grupo_id = g.id
-            GROUP BY g.nome, s.nome
-            ORDER BY "Quantidade" DESC
-        """, conn_dist)
-        st.dataframe(df_dist, width="stretch", hide_index=True)
-    except Exception as e:
-        st.error(f"Erro ao carregar distribuição: {e}")
-    conn_dist.close()
+    resp_dist = supabase.table("questoes").select("id, subgrupos(nome, grupos(nome))").execute().data
     
+    dist_data = []
+    for q in resp_dist:
+        if q.get('subgrupos') and q['subgrupos'].get('grupos'):
+            dist_data.append({
+                "Grupo": q['subgrupos']['grupos']['nome'],
+                "Subgrupo": q['subgrupos']['nome'],
+                "id": q['id']
+            })
+    
+    df_dist_raw = pd.DataFrame(dist_data)
+    if not df_dist_raw.empty:
+        df_dist = df_dist_raw.groupby(['Grupo', 'Subgrupo']).agg(Quantidade=('id', 'count')).reset_index()
+        df_dist = df_dist.sort_values("Quantidade", ascending=False)
+        st.dataframe(df_dist, width="stretch", hide_index=True)
+    else:
+        st.info("Nenhuma questão no banco.")
+        
     st.markdown("---")
     
-    conn = sqlite3.connect(DB_PATH, timeout=15)
+    # 3. Buscando respostas do Usuario logado
+    resp_respostas = supabase.table("respostas").select("id, questao_id, acertou, tempo_segundos, data, questoes(subgrupo_id, subgrupos(nome, grupos(nome)))").eq("user_id", user.id).execute().data
     
-    # Busca respostas (se a tabela ou views não existirem corretamente, pd pode falhar. Usamos try except generico apenas em caso de BD novo)
-    try:
-        df_resp = pd.read_sql_query("""
-            SELECT r.id, r.questao_id, r.acertou, r.tempo_segundos, q.subgrupo_id, s.nome as subgrupo_nome, g.nome as grupo_nome
-            FROM respostas r
-            JOIN questoes q ON r.questao_id = q.id
-            JOIN subgrupos s ON q.subgrupo_id = s.id
-            JOIN grupos g ON s.grupo_id = g.id
-            WHERE s.nome NOT IN ('Fora do Edital', 'Não Classificado', 'NAO CLASSIFICADO')
-            AND g.nome NOT IN ('Fora do Edital', 'Não Classificado', 'NAO CLASSIFICADO')
-        """, conn)
-    except Exception:
-        df_resp = pd.DataFrame()
-        
-    conn.close()
+    resp_data = []
+    for r in resp_respostas:
+        if r.get('questoes') and r['questoes'].get('subgrupos') and r['questoes']['subgrupos'].get('grupos'):
+            g_nome = r['questoes']['subgrupos']['grupos']['nome']
+            s_nome = r['questoes']['subgrupos']['nome']
+            
+            if g_nome.upper() not in ['FORA DO EDITAL', 'NÃO CLASSIFICADO', 'NAO CLASSIFICADO']:
+                resp_data.append({
+                    "id": r['id'],
+                    "questao_id": r['questao_id'],
+                    "acertou": r['acertou'],
+                    "tempo_segundos": r['tempo_segundos'],
+                    "data": r['data'],
+                    "item_id": r['questoes']['subgrupo_id'],
+                    "item_nome": s_nome,
+                    "grupo_nome": g_nome
+                })
+                
+    df_resp = pd.DataFrame(resp_data)
     
     total_q = len(df_resp) if not df_resp.empty else 0
     if total_q > 0:
@@ -73,44 +78,19 @@ def render(DB_PATH):
     else:
         tx_acerto = 0
         
-    """# Exibe métricas globais
-    st.subheader("Visão Geral")
-    col1, col2 = st.columns(2)
-    col1.metric("Questões Respondidas", total_q)
-    col2.metric("Taxa de Acerto Geral", f"{tx_acerto:.1f}%")
+    # 4. Projeção de Nota
+    resp_sub_pesos = supabase.table("subgrupos").select("peso, grupos(nome)").execute().data
+    pesos_data = []
+    for s in resp_sub_pesos:
+        if s.get('grupos'):
+            pesos_data.append({"nome": s['grupos']['nome'], "peso": s['peso']})
     
-    st.markdown("---")"""
-    # Fetch responses over time for the temporal graph
-    conn = sqlite3.connect(DB_PATH, timeout=15)
-    try:
-        df_resp_tempo = pd.read_sql_query("""
-            SELECT r.data, r.acertou, g.nome as grupo_nome
-            FROM respostas r
-            JOIN questoes q ON r.questao_id = q.id
-            JOIN subgrupos s ON q.subgrupo_id = s.id
-            JOIN grupos g ON s.grupo_id = g.id
-            WHERE s.nome NOT IN ('Fora do Edital', 'Não Classificado', 'NAO CLASSIFICADO')
-            AND g.nome NOT IN ('Fora do Edital', 'Não Classificado', 'NAO CLASSIFICADO')
-            ORDER BY r.data ASC
-        """, conn)
-    except Exception:
-        df_resp_tempo = pd.DataFrame()
-    conn.close()
-    
-    # Puxar do banco os grupos e seus pesos médios (Básicos = 1.0, Específicos = 2.5)
-    conn = sqlite3.connect(DB_PATH, timeout=15)
-    df_pesos = pd.read_sql_query("""
-        SELECT g.nome, AVG(s.peso) as avg_peso 
-        FROM grupos g 
-        JOIN subgrupos s ON s.grupo_id = g.id 
-        GROUP BY g.nome
-    """, conn)
-    conn.close()
-    
-    # 1.0 -> Básicos (Exibir nome da disciplina real)
-    dist_basics = df_pesos[df_pesos['avg_peso'] <= 1.5]['nome'].tolist()
-    # Específicos são todos os outros (agrupados sob "Conhecimentos Específicos")
-    
+    df_pesos_raw = pd.DataFrame(pesos_data)
+    if not df_pesos_raw.empty:
+        df_pesos = df_pesos_raw.groupby('nome').agg(avg_peso=('peso', 'mean')).reset_index()
+    else:
+        df_pesos = pd.DataFrame(columns=['nome', 'avg_peso'])
+        
     qtd_prova = {
         "LÍNGUA PORTUGUESA": 12, 
         "LÍNGUA INGLESA": 12, 
@@ -124,11 +104,13 @@ def render(DB_PATH):
     if not df_resp.empty:
         def get_disciplina(row):
             gn = str(row['grupo_nome']).strip().upper()
-            # Se for uma disciplina mapeada no edital (básicas), usa o nome dela.
             if gn in qtd_prova: 
                 return gn
-            # Todo o restante é agrupado em "Conhecimentos Específicos"
+            # Trata LEGISLAÇÃO, SEGURANÇA E PROTEÇÃO DE DADOS como LEGISLAÇÃO ACERCA DE... se houver nome reduzido
+            if gn == "LEGISLAÇÃO, SEGURANÇA E PROTEÇÃO DE DADOS":
+                return "LEGISLAÇÃO ACERCA DE SEGURANÇA DA INFORMAÇÃO E PROTEÇÃO DE DADOS"
             return "Conhecimentos Específicos"
+            
         df_resp['disciplina'] = df_resp.apply(get_disciplina, axis=1)
         agg_disc = df_resp.groupby('disciplina').agg(
             respondidas=('id', 'count'),
@@ -145,21 +127,20 @@ def render(DB_PATH):
     dados_disciplinas = []
     total_proj = 0.0
     
-    # Montar a lista formatada com as básicas mapeadas no qtd_prova + Conhecimentos Específicos
     disciplinas_avaliadas = [k for k in qtd_prova.keys() if k != "Conhecimentos Específicos"] + ["Conhecimentos Específicos"]
     
     for disc in disciplinas_avaliadas:
         peso = 2.5 if disc == "Conhecimentos Específicos" else 1.0
         qtd = qtd_prova.get(disc, 0)
         max_pts = qtd * peso
-        resp, acertos = get_stats(disc)
-        taxa = (acertos / resp) if resp > 0 else 0.0
+        resp, acrt = get_stats(disc)
+        taxa = (acrt / resp) if resp > 0 else 0.0
         proj = taxa * max_pts
         
         dados_disciplinas.append({
             "Disciplina": disc,
             "Respondidas": resp,
-            "Acertos": acertos,
+            "Acertos": acrt,
             "% de Acerto": f"{(taxa * 100):.1f}%" if resp > 0 else "0.0%",
             "Pontuação Projetada": round(proj, 2)
         })
@@ -188,36 +169,29 @@ def render(DB_PATH):
         **{'text-align': 'center'}
     )
     st.dataframe(styled_df_disc, width="stretch", hide_index=True)
-    
-    
         
     st.markdown("---")
     st.markdown("<h3 style='margin-top: 0px; margin-bottom: -30px;'>Evolução Temporal 📈</h3>", unsafe_allow_html=True)
-    if not df_resp_tempo.empty:
-        # Convert date column to datetime
-        df_resp_tempo['data'] = pd.to_datetime(df_resp_tempo['data'])
+    if not df_resp.empty:
+        df_resp_tempo = df_resp.copy()
+        df_resp_tempo['data'] = pd.to_datetime(df_resp_tempo['data']).dt.tz_localize(None)
         df_resp_tempo['data_dia'] = df_resp_tempo['data'].dt.date
         
-        # Group by day to get daily accuracy
         daily_acc = df_resp_tempo.groupby('data_dia').agg(
             total=('acertou', 'count'),
             acertos=('acertou', 'sum')
         ).reset_index()
         
-        # Convertendo a taxa de acerto para a projeção de pontos no edital (Max: 115 pts)
         daily_acc['Pontos no Dia'] = (daily_acc['acertos'] / daily_acc['total']) * 115
         
-        # Calcula a pontuação geral acumulada ao longo do tempo
         daily_acc['total_acumulado'] = daily_acc['total'].cumsum()
         daily_acc['acertos_acumulados'] = daily_acc['acertos'].cumsum()
         daily_acc['Pontos Gerais'] = (daily_acc['acertos_acumulados'] / daily_acc['total_acumulado']) * 115
         
-        # Usar formato datetime nativo do Pandas para o Altair processar corretamente o eixo X
         daily_acc['data_dia_dt'] = pd.to_datetime(daily_acc['data_dia'])
         
         import altair as alt
         
-        # Melt dataframe para o formato longo que o Altair prefere
         df_melted = daily_acc.melt(
             id_vars=['data_dia_dt'], 
             value_vars=['Pontos no Dia', 'Pontos Gerais'], 
@@ -225,22 +199,21 @@ def render(DB_PATH):
             value_name='Pontuação'
         )
         
-        import datetime
         hoje = datetime.date.today().strftime('%Y-%m-%d')
-        datas_ticks = pd.date_range(start='2026-07-04', end=hoje).tolist()
+        # Determinar a primeira data de resposta real ou fallback
+        min_date = df_resp_tempo['data_dia_dt'].min().strftime('%Y-%m-%d') if 'data_dia_dt' in df_resp_tempo and not df_resp_tempo.empty else '2026-07-04'
         
-        # Linha base dos dados
+        datas_ticks = pd.date_range(start=min_date, end=hoje).tolist()
+        
         chart = alt.Chart(df_melted).mark_line(point=True, interpolate='monotone').encode(
-            x=alt.X('data_dia_dt:T', scale=alt.Scale(domain=['2026-07-04', hoje]), title='Data', axis=alt.Axis(values=datas_ticks, format='%d/%m', labelAngle=-45)),
+            x=alt.X('data_dia_dt:T', scale=alt.Scale(domain=[min_date, hoje]), title='Data', axis=alt.Axis(values=datas_ticks, format='%d/%m', labelAngle=-45)),
             y=alt.Y('Pontuação:Q', scale=alt.Scale(domain=[0, 120], nice=False), title='Pontuação Projetada (Max: 115)', axis=alt.Axis(tickCount=24, labelOverlap=False)),
             color=alt.Color('Indicador:N', legend=alt.Legend(title=None, orient="bottom")),
             tooltip=[alt.Tooltip('data_dia_dt:T', title='Data', format='%d/%m/%Y'), 'Indicador', alt.Tooltip('Pontuação:Q', format='.1f')]
         )
         
-        # Linha pontilhada vermelha indicando o teto de 115 pontos
         rule = alt.Chart(pd.DataFrame({'y': [115]})).mark_rule(color='#ff4b4b', strokeDash=[5, 5]).encode(y='y:Q')
         
-        # Junta os gráficos e ajusta a altura para remover o espaço ocioso
         final_chart = (chart + rule).properties(
             height=600,
             padding={"top": 0, "bottom": 0}
@@ -255,27 +228,26 @@ def render(DB_PATH):
     
     st.markdown("---")
     st.subheader("Índice de Domínio (AMV 2.0) 🧠")
-    conn = sqlite3.connect(DB_PATH, timeout=15)
-    df_amv2 = pd.read_sql_query('''
-        SELECT 
-            s.nome as Tópico,
-            a.nivel_dominio as dominio_perc,
-            a.taxa_acerto,
-            a.questoes_respondidas,
-            a.numero_revisoes,
-            a.status
-        FROM aprendizado_subgrupo a
-        JOIN subgrupos s ON a.subgrupo_id = s.id
-        WHERE a.status != 'NOVO'
-        ORDER BY a.nivel_dominio DESC
-    ''', conn)
-    conn.close()
+    
+    resp_amv = supabase.table("aprendizado_item").select("*, itens_estudo(nome)").eq("user_id", user.id).neq("status", "NOVO").order("nivel_dominio", desc=True).execute().data
+    
+    amv_data = []
+    for a in resp_amv:
+        if a.get('itens_estudo'):
+            amv_data.append({
+                "Tópico": a['itens_estudo']['nome'],
+                "dominio_perc": a['nivel_dominio'],
+                "taxa_acerto": a['taxa_acerto'],
+                "questoes_respondidas": a['questoes_respondidas'],
+                "numero_revisoes": a['numero_revisoes'],
+                "status": a['status']
+            })
+            
+    df_amv2 = pd.DataFrame(amv_data)
     
     if not df_amv2.empty:
-        # Metricas AMV2
         dominados = len(df_amv2[df_amv2['status'] == 'DOMINADO'])
         em_aprendiz = len(df_amv2[df_amv2['status'].isin(['RETENCAO_INICIAL', 'REVISAO_1', 'REVISAO_2', 'REVISAO_3'])])
-        atrasados = 0 # Pode calcular via sql proxima_revisao < now
         
         c1, c2, c3 = st.columns(3)
         c1.metric("Subgrupos Dominados 🏆", dominados)
@@ -309,22 +281,22 @@ def render(DB_PATH):
     st.subheader("Desempenho por Tópico (Raio-X)")
     
     if not df_resp.empty:
-        agg_resp = df_resp.groupby("subgrupo_nome").agg(
+        agg_resp = df_resp.groupby("item_nome").agg(
             total_questoes=('id', 'count'),
             acertos=('acertou', 'sum')
         ).reset_index()
         agg_resp['taxa_acerto'] = (agg_resp['acertos'] / agg_resp['total_questoes'] * 100).round(1)
     else:
-        agg_resp = pd.DataFrame(columns=["subgrupo_nome", "total_questoes", "acertos", "taxa_acerto"])
+        agg_resp = pd.DataFrame(columns=["item_nome", "total_questoes", "acertos", "taxa_acerto"])
         
     if not agg_resp.empty:
-        df_raiox = agg_resp[["subgrupo_nome", "total_questoes", "taxa_acerto"]].sort_values("total_questoes", ascending=False)
+        df_raiox = agg_resp[["item_nome", "total_questoes", "taxa_acerto"]].sort_values("total_questoes", ascending=False)
         styled_raiox = df_raiox.style.set_properties(subset=['total_questoes'], **{'text-align': 'center'})
         
         st.dataframe(
             styled_raiox,
             column_config={
-                "subgrupo_nome": "Tópico (Subgrupo)",
+                "item_nome": "Tópico (Subgrupo)",
                 "total_questoes": "Questões",
                 "taxa_acerto": st.column_config.ProgressColumn("Acerto (%)", min_value=0, max_value=100, format="%f%%")
             },
@@ -338,22 +310,15 @@ def render(DB_PATH):
     st.markdown("---")
     st.subheader("Tempo de Resolução dos Simulados ⏱️")
     
-    conn = sqlite3.connect(DB_PATH, timeout=15)
-    try:
-        df_sim_time = pd.read_sql_query('''
-            SELECT id, date(data) as data_simulado, tempo_segundos, pontuacao_total 
-            FROM historico_simulados 
-            ORDER BY data ASC
-        ''', conn)
-    except Exception:
-        df_sim_time = pd.DataFrame()
-    conn.close()
+    resp_sim = supabase.table("historico_simulados").select("*").eq("user_id", user.id).order("data", desc=False).execute().data
+    df_sim_time = pd.DataFrame(resp_sim)
     
     if not df_sim_time.empty:
-        # Convert seconds to minutes for the chart
+        df_sim_time['data'] = pd.to_datetime(df_sim_time['data']).dt.tz_localize(None)
+        df_sim_time['data_simulado'] = df_sim_time['data'].dt.date
+        
         df_sim_time['Minutos'] = (df_sim_time['tempo_segundos'] / 60).round(1)
-        # Format date
-        df_sim_time['Data (ID)'] = df_sim_time.apply(lambda r: f"{pd.to_datetime(r['data_simulado']).strftime('%d/%m')} (Sim #{r['id']})", axis=1)
+        df_sim_time['Data (ID)'] = df_sim_time.apply(lambda r: f"{r['data_simulado'].strftime('%d/%m')} (Sim #{r['id']})", axis=1)
         
         import altair as alt
         
