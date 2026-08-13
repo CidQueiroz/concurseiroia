@@ -7,11 +7,8 @@ __pycache__/
 # Variáveis de Ambiente e Chaves
 .env
 
-# Scripts temporários e de manutenção
-refactor*.py
-verificar_supa*.py
-check_count_supa*.py
-script_parse_edital.py
+# Scripts temporários e lixeiras de manutenção
+_temp/
 
 # Arquivos de Sessão e Estado do Simulador
 data/bancos/session_local.json
