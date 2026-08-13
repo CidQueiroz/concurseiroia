@@ -49,7 +49,7 @@ def render(DB_PATH=None):
     st.markdown("---")
     
     # 3. Buscando respostas do Usuario logado
-    resp_respostas = supabase.table("respostas").select("id, questao_id, acertou, tempo_segundos, data, questoes(subgrupo_id, subgrupos(nome, grupos(nome)))").eq("user_id", user.id).execute().data
+    resp_respostas = supabase.table("respostas").select("id, questao_id, acertou, tempo_segundos, data, questoes(itens_estudo(nome, subgrupos(nome, grupos(nome))))").eq("user_id", user.id).execute().data
     
     resp_data = []
     for r in resp_respostas:

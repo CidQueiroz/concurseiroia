@@ -27,11 +27,18 @@ def migrate():
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
+    
     print("🧹 Limpando dados antigos da nuvem (via cascade)...")
     try:
+        supabase.table("respostas").delete().neq("id", 0).execute()
+        supabase.table("aprendizado_item").delete().neq("id", 0).execute()
+        supabase.table("questoes").delete().neq("id", 0).execute()
+        supabase.table("itens_estudo").delete().neq("id", 0).execute()
+        supabase.table("subgrupos").delete().neq("id", 0).execute()
         supabase.table("grupos").delete().neq("id", 0).execute()
     except Exception as e:
-        print(f"Aviso ao limpar (pode ser normal se estiver vazio): {e}")
+        print(f"Aviso ao limpar: {e}")
+
 
     # 1. Grupos
     print("⏳ Migrando Grupos...")
@@ -111,6 +118,10 @@ def migrate():
             resp = supabase.table("itens_estudo").insert({"subgrupo_id": sub_supa_id, "nome": "Tópicos Gerais"}).execute()
             primeiro_item_por_subgrupo_supa[sub_supa_id] = resp.data[0]["id"]
 
+    
+    # Fetch all valid item_ids from Supabase just to be safe
+    valid_itens = set(x['id'] for x in supabase.table("itens_estudo").select("id").execute().data)
+
     for i in range(0, len(questoes), batch_size):
         batch = questoes[i:i+batch_size]
         batch_data = []
@@ -130,6 +141,9 @@ def migrate():
                     new_item_id = primeiro_item_por_subgrupo_supa[new_subgrupo_id]
             
             if new_item_id is not None:
+                if new_item_id not in valid_itens:
+                    print(f"Aviso: questao referenciando item_id {new_item_id} que nao existe no Supabase. Ignorando...")
+                    continue
                 batch_data.append({
                     "item_id": new_item_id,
                     "banca": q["banca"],
