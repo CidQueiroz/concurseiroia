@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.1.0 (2026-08-15)
+
+### Features
+
+- Implementa validação de formulário
+  ([`a023e67`](https://github.com/CidQueiroz/concurseiroia/commit/a023e671fff1bb2ced21af7ff1d6d4721e23c3b3))
+
+
 ## v1.0.1 (2026-08-15)
 
 ### Bug Fixes
