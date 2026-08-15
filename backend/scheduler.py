@@ -7,12 +7,29 @@ def _get_peso_grupo(grupo_nome):
         return 2.5
     return 1.0
 
-def inicializar_itens(user_id):
+def inicializar_itens(user_id, novos_grupos=None):
     supabase = get_supabase()
-    item_resp = supabase.table("itens_estudo").select("id").execute().data
-    aprendizado_resp = supabase.table("aprendizado_item").select("item_id").eq("user_id", user_id).execute().data
     
-    existentes = {a["item_id"] for a in aprendizado_resp}
+    # 1. Obter grupos que o usuário já tem
+    resp_a = supabase.table("aprendizado_item").select("item_id, itens_estudo!inner(subgrupos!inner(grupos!inner(nome)))").eq("user_id", user_id).execute().data
+    
+    existentes = {a["item_id"] for a in resp_a}
+    
+    grupos_atuais = set()
+    for a in resp_a:
+        if a.get('itens_estudo') and a['itens_estudo'].get('subgrupos'):
+            grupos_atuais.add(a['itens_estudo']['subgrupos']['grupos']['nome'])
+            
+    # 2. Adicionar os novos grupos selecionados
+    if novos_grupos:
+        for g in novos_grupos:
+            grupos_atuais.add(g)
+            
+    if not grupos_atuais:
+        return # Usuário não tem nenhum grupo ainda, não inicializa nada
+        
+    # 3. Buscar todos os itens que pertencem a esses grupos
+    item_resp = supabase.table("itens_estudo").select("id, subgrupos!inner(grupos!inner(nome))").in_("subgrupos.grupos.nome", list(grupos_atuais)).execute().data
     
     novos = []
     for s in item_resp:

@@ -12,42 +12,45 @@ def render(DB_PATH=None):
         
     st.header("Radar do Edital 📊")
     
-    # 1. Progresso do Banco (Global, não depende do user)
-    total_q = supabase.table("questoes").select("id", count="exact").execute().count or 0
-    validadas = supabase.table("questoes").select("id", count="exact").eq("valida", 1).execute().count or 0
-    removidas = supabase.table("questoes").select("id", count="exact").eq("valida", -1).execute().count or 0
-    nao_validadas = total_q - validadas - removidas
+    is_admin = (user.email == "cydy.potter@gmail.com")
     
-    st.subheader("Progresso do Banco de Questões 🗃️")
-    colV1, colV2, colV3 = st.columns(3)
-    colV1.metric("Validadas ✅", validadas, help="Questões validadas (com gabarito revisado).")
-    colV2.metric("Aguardando Validação ⏳", nao_validadas, help="Questões inéditas no banco (sem gabarito ou geradas por IA).")
-    colV3.metric("Removidas 🗑️", removidas, help="Questões com defeito que foram descartadas.")
-    st.markdown("---")
-    
-    # 2. Distribuição do Banco
-    st.subheader("Distribuição do Banco de Questões 📚")
-    resp_dist = supabase.table("questoes").select("id, itens_estudo(nome, subgrupos(nome, grupos(nome)))").execute().data
-    
-    dist_data = []
-    for q in resp_dist:
-        if q.get('itens_estudo') and q['itens_estudo'].get('subgrupos') and q['itens_estudo']['subgrupos'].get('grupos'):
-            dist_data.append({
-                "Grupo": q['itens_estudo']['subgrupos']['grupos']['nome'],
-                "Subgrupo": q['itens_estudo']['subgrupos']['nome'],
-                "Item": q['itens_estudo']['nome'],
-                "id": q['id']
-            })
-    
-    df_dist_raw = pd.DataFrame(dist_data)
-    if not df_dist_raw.empty:
-        df_dist = df_dist_raw.groupby(['Grupo', 'Subgrupo']).agg(Quantidade=('id', 'count')).reset_index()
-        df_dist = df_dist.sort_values("Quantidade", ascending=False)
-        st.dataframe(df_dist, width="stretch", hide_index=True)
-    else:
-        st.info("Nenhuma questão no banco.")
+    if is_admin:
+        # 1. Progresso do Banco (Global, não depende do user)
+        total_q = supabase.table("questoes").select("id", count="exact").execute().count or 0
+        validadas = supabase.table("questoes").select("id", count="exact").eq("valida", 1).execute().count or 0
+        removidas = supabase.table("questoes").select("id", count="exact").eq("valida", -1).execute().count or 0
+        nao_validadas = total_q - validadas - removidas
         
-    st.markdown("---")
+        st.subheader("Progresso do Banco de Questões 🗃️")
+        colV1, colV2, colV3 = st.columns(3)
+        colV1.metric("Validadas ✅", validadas, help="Questões validadas (com gabarito revisado).")
+        colV2.metric("Aguardando Validação ⏳", nao_validadas, help="Questões inéditas no banco (sem gabarito ou geradas por IA).")
+        colV3.metric("Removidas 🗑️", removidas, help="Questões com defeito que foram descartadas.")
+        st.markdown("---")
+        
+        # 2. Distribuição do Banco
+        st.subheader("Distribuição do Banco de Questões 📚")
+        resp_dist = supabase.table("questoes").select("id, itens_estudo(nome, subgrupos(nome, grupos(nome)))").execute().data
+        
+        dist_data = []
+        for q in resp_dist:
+            if q.get('itens_estudo') and q['itens_estudo'].get('subgrupos') and q['itens_estudo']['subgrupos'].get('grupos'):
+                dist_data.append({
+                    "Grupo": q['itens_estudo']['subgrupos']['grupos']['nome'],
+                    "Subgrupo": q['itens_estudo']['subgrupos']['nome'],
+                    "Item": q['itens_estudo']['nome'],
+                    "id": q['id']
+                })
+        
+        df_dist_raw = pd.DataFrame(dist_data)
+        if not df_dist_raw.empty:
+            df_dist = df_dist_raw.groupby(['Grupo', 'Subgrupo']).agg(Quantidade=('id', 'count')).reset_index()
+            df_dist = df_dist.sort_values("Quantidade", ascending=False)
+            st.dataframe(df_dist, width="stretch", hide_index=True)
+        else:
+            st.info("Nenhuma questão no banco.")
+            
+        st.markdown("---")
     
     # 3. Buscando respostas do Usuario logado
     resp_respostas = supabase.table("respostas").select("id, questao_id, acertou, tempo_segundos, data, questoes(itens_estudo(nome, subgrupos(nome, grupos(nome))))").eq("user_id", user.id).execute().data
@@ -80,97 +83,60 @@ def render(DB_PATH=None):
     else:
         tx_acerto = 0
         
-    # 4. Projeção de Nota
-    resp_sub_pesos = supabase.table("subgrupos").select("peso, grupos(nome)").execute().data
-    pesos_data = []
-    for s in resp_sub_pesos:
-        if s.get('grupos'):
-            pesos_data.append({"nome": s['grupos']['nome'], "peso": s['peso']})
-    
-    df_pesos_raw = pd.DataFrame(pesos_data)
-    if not df_pesos_raw.empty:
-        df_pesos = df_pesos_raw.groupby('nome').agg(avg_peso=('peso', 'mean')).reset_index()
-    else:
-        df_pesos = pd.DataFrame(columns=['nome', 'avg_peso'])
-        
-    qtd_prova = {
-        "LÍNGUA PORTUGUESA": 12, 
-        "LÍNGUA INGLESA": 12, 
-        "RACIOCÍNIO LÓGICO MATEMÁTICO": 5, 
-        "ATUALIDADES E INTELIGÊNCIA ARTIFICIAL": 6, 
-        "LEGISLAÇÃO ACERCA DE SEGURANÇA DA INFORMAÇÃO E PROTEÇÃO DE DADOS": 5,
-        "Conhecimentos Específicos": 30
-    }
-    
-    agg_disc = pd.DataFrame()
-    if not df_resp.empty:
-        def get_disciplina(row):
-            gn = str(row['grupo_nome']).strip().upper()
-            if gn in qtd_prova: 
-                return gn
-            # Trata LEGISLAÇÃO, SEGURANÇA E PROTEÇÃO DE DADOS como LEGISLAÇÃO ACERCA DE... se houver nome reduzido
-            if gn == "LEGISLAÇÃO, SEGURANÇA E PROTEÇÃO DE DADOS":
-                return "LEGISLAÇÃO ACERCA DE SEGURANÇA DA INFORMAÇÃO E PROTEÇÃO DE DADOS"
-            return "Conhecimentos Específicos"
+    # 4. Métricas de Desempenho por Matéria (apenas vinculadas)
+    resp_a = supabase.table("aprendizado_item").select("itens_estudo!inner(subgrupos!inner(grupos!inner(nome)))").eq("user_id", user.id).execute().data
+    grupos_atuais = set()
+    for a in resp_a:
+        if a.get('itens_estudo') and a['itens_estudo'].get('subgrupos'):
+            grupos_atuais.add(a['itens_estudo']['subgrupos']['grupos']['nome'])
             
-        df_resp['disciplina'] = df_resp.apply(get_disciplina, axis=1)
-        agg_disc = df_resp.groupby('disciplina').agg(
+    st.subheader("Métricas de Desempenho por Matéria 📊")
+    
+    if not df_resp.empty and grupos_atuais:
+        df_resp_linked = df_resp[df_resp['grupo_nome'].isin(grupos_atuais)]
+        agg_disc = df_resp_linked.groupby('grupo_nome').agg(
             respondidas=('id', 'count'),
             acertos=('acertou', 'sum')
         ).reset_index()
-    
-    def get_stats(disc):
-        if not agg_disc.empty:
-            row = agg_disc[agg_disc['disciplina'] == disc]
+        
+        dados_disciplinas = []
+        for g in sorted(list(grupos_atuais)):
+            resp_g = 0
+            acrt_g = 0
+            row = agg_disc[agg_disc['grupo_nome'] == g]
             if not row.empty:
-                return int(row['respondidas'].iloc[0]), int(row['acertos'].iloc[0])
-        return 0, 0
-    
-    dados_disciplinas = []
-    total_proj = 0.0
-    
-    disciplinas_avaliadas = [k for k in qtd_prova.keys() if k != "Conhecimentos Específicos"] + ["Conhecimentos Específicos"]
-    
-    for disc in disciplinas_avaliadas:
-        peso = 2.5 if disc == "Conhecimentos Específicos" else 1.0
-        qtd = qtd_prova.get(disc, 0)
-        max_pts = qtd * peso
-        resp, acrt = get_stats(disc)
-        taxa = (acrt / resp) if resp > 0 else 0.0
-        proj = taxa * max_pts
+                resp_g = int(row['respondidas'].iloc[0])
+                acrt_g = int(row['acertos'].iloc[0])
+            
+            taxa = (acrt_g / resp_g * 100) if resp_g > 0 else 0.0
+            
+            dados_disciplinas.append({
+                "Disciplina": g,
+                "Respondidas": resp_g,
+                "Acertos": acrt_g,
+                "% de Acerto": f"{taxa:.1f}%"
+            })
+            
+        df_disc = pd.DataFrame(dados_disciplinas)
         
-        dados_disciplinas.append({
-            "Disciplina": disc,
-            "Respondidas": resp,
-            "Acertos": acrt,
-            "% de Acerto": f"{(taxa * 100):.1f}%" if resp > 0 else "0.0%",
-            "Pontuação Projetada": round(proj, 2)
-        })
+        total_resp = df_disc['Respondidas'].sum()
+        total_acertos = df_disc['Acertos'].sum()
+        total_taxa = (total_acertos / total_resp * 100) if total_resp > 0 else 0.0
         
-        total_proj += proj
+        df_disc.loc[len(df_disc)] = {
+            "Disciplina": "TOTAL (Média Geral)", 
+            "Respondidas": total_resp, 
+            "Acertos": total_acertos, 
+            "% de Acerto": f"{total_taxa:.1f}%"
+        }
         
-    df_disc = pd.DataFrame(dados_disciplinas)
-    
-    total_resp = df_disc['Respondidas'].sum()
-    total_acertos = df_disc['Acertos'].sum()
-    total_taxa = (total_acertos / total_resp * 100) if total_resp > 0 else 0.0
-    
-    df_disc.loc[len(df_disc)] = {
-        "Disciplina": "TOTAL (Projeção do Simulado)", 
-        "Respondidas": total_resp, 
-        "Acertos": total_acertos, 
-        "% de Acerto": f"{total_taxa:.1f}%",
-        "Pontuação Projetada": round(total_proj, 2)
-    }
-    
-    st.subheader("Projeção de Pontuação Real da Prova 🏆")
-    st.markdown("A tabela abaixo mapeia suas respostas e calcula qual seria sua nota exata **se a prova fosse hoje**, de acordo com os pesos do Edital (Total de 115 pts).")
-    
-    styled_df_disc = df_disc.style.set_properties(
-        subset=['Respondidas', 'Acertos', '% de Acerto', 'Pontuação Projetada'], 
-        **{'text-align': 'center'}
-    )
-    st.dataframe(styled_df_disc, width="stretch", hide_index=True)
+        styled_df_disc = df_disc.style.set_properties(
+            subset=['Respondidas', 'Acertos', '% de Acerto'], 
+            **{'text-align': 'center'}
+        )
+        st.dataframe(styled_df_disc, width="stretch", hide_index=True)
+    else:
+        st.info("Nenhuma matéria vinculada ou nenhuma resposta registrada para as matérias atuais.")
         
     st.markdown("---")
     st.markdown("<h3 style='margin-top: 0px; margin-bottom: -30px;'>Evolução Temporal 📈</h3>", unsafe_allow_html=True)
@@ -184,11 +150,11 @@ def render(DB_PATH=None):
             acertos=('acertou', 'sum')
         ).reset_index()
         
-        daily_acc['Pontos no Dia'] = (daily_acc['acertos'] / daily_acc['total']) * 115
+        daily_acc['Acerto Dia (%)'] = (daily_acc['acertos'] / daily_acc['total']) * 100
         
         daily_acc['total_acumulado'] = daily_acc['total'].cumsum()
         daily_acc['acertos_acumulados'] = daily_acc['acertos'].cumsum()
-        daily_acc['Pontos Gerais'] = (daily_acc['acertos_acumulados'] / daily_acc['total_acumulado']) * 115
+        daily_acc['Acerto Geral (%)'] = (daily_acc['acertos_acumulados'] / daily_acc['total_acumulado']) * 100
         
         daily_acc['data_dia_dt'] = pd.to_datetime(daily_acc['data_dia'], format='mixed', utc=True)
         
@@ -196,25 +162,25 @@ def render(DB_PATH=None):
         
         df_melted = daily_acc.melt(
             id_vars=['data_dia_dt'], 
-            value_vars=['Pontos no Dia', 'Pontos Gerais'], 
+            value_vars=['Acerto Dia (%)', 'Acerto Geral (%)'], 
             var_name='Indicador', 
-            value_name='Pontuação'
+            value_name='Taxa de Acerto (%)'
         )
         
         hoje = datetime.date.today().strftime('%Y-%m-%d')
-        # Determinar a primeira data de resposta real ou fallback
         min_date = df_resp_tempo['data_dia_dt'].min().strftime('%Y-%m-%d') if 'data_dia_dt' in df_resp_tempo and not df_resp_tempo.empty else '2026-07-04'
         
         datas_ticks = pd.date_range(start=min_date, end=hoje).tolist()
         
         chart = alt.Chart(df_melted).mark_line(point=True, interpolate='monotone').encode(
             x=alt.X('data_dia_dt:T', scale=alt.Scale(domain=[min_date, hoje]), title='Data', axis=alt.Axis(values=datas_ticks, format='%d/%m', labelAngle=-45)),
-            y=alt.Y('Pontuação:Q', scale=alt.Scale(domain=[0, 120], nice=False), title='Pontuação Projetada (Max: 115)', axis=alt.Axis(tickCount=24, labelOverlap=False)),
+            y=alt.Y('Taxa de Acerto (%):Q', scale=alt.Scale(domain=[0, 100], nice=False), title='Taxa de Acerto (%)', axis=alt.Axis(tickCount=10, labelOverlap=False)),
             color=alt.Color('Indicador:N', legend=alt.Legend(title=None, orient="bottom")),
-            tooltip=[alt.Tooltip('data_dia_dt:T', title='Data', format='%d/%m/%Y'), 'Indicador', alt.Tooltip('Pontuação:Q', format='.1f')]
+            tooltip=[alt.Tooltip('data_dia_dt:T', title='Data', format='%d/%m/%Y'), 'Indicador', alt.Tooltip('Taxa de Acerto (%):Q', format='.1f')]
         )
         
-        rule = alt.Chart(pd.DataFrame({'y': [115]})).mark_rule(color='#ff4b4b', strokeDash=[5, 5]).encode(y='y:Q')
+        # Linha de Meta (80%)
+        rule = alt.Chart(pd.DataFrame({'y': [80]})).mark_rule(color='#ff4b4b', strokeDash=[5, 5]).encode(y='y:Q')
         
         final_chart = (chart + rule).properties(
             height=600,

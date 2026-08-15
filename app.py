@@ -92,7 +92,11 @@ with st.sidebar.expander("⚙️ Chaves de API (Opcional)"):
     st.session_state["user_gemini_key"] = st.text_input("Gemini API Key", type="password", value=st.session_state["user_gemini_key"])
     st.markdown("<small>[Como obter chave Groq?](https://console.groq.com/keys) | [Gemini?](https://aistudio.google.com/app/apikey)</small>", unsafe_allow_html=True)
 
-menu = st.sidebar.radio("Navegação", ["Hoje", "Modo Prova", "Diagnóstico (IA)", "Estatísticas", "Gerenciador", "Cronograma"])
+    opcoes_menu = ["Hoje", "Modo Prova", "Diagnóstico (IA)", "Estatísticas", "Cronograma"]
+    if st.session_state["user"].email == "cydy.potter@gmail.com":
+        opcoes_menu.insert(4, "Gerenciador")
+        
+    menu = st.sidebar.radio("Navegação", opcoes_menu)
 
 if menu == "Hoje":
     hoje.render(DB_PATH)

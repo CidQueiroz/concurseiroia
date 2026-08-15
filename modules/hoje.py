@@ -32,6 +32,13 @@ def render(DB_PATH=None):
         
     lista_novos, lista_revs = st.session_state["plano_diario"]
     
+    if not lista_novos and not lista_revs:
+        resp = supabase.table("aprendizado_item").select("item_id").eq("user_id", user.id).limit(1).execute().data
+        if not resp:
+            st.warning("⚠️ Você ainda não vinculou nenhuma matéria ao seu perfil!")
+            st.info("Vá até a aba **Cronograma** no menu lateral para selecionar os grupos de estudo (matérias) que deseja focar.")
+            st.stop()
+            
     st.markdown("---")
     
     # ---------------------------------------------------------

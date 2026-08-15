@@ -18,6 +18,12 @@ def render(DB_PATH=None):
 
     st.header("Modo Prova 📝")
     
+    resp_user = supabase.table("aprendizado_item").select("item_id").eq("user_id", user.id).limit(1).execute().data
+    if not resp_user or len(resp_user) == 0:
+        st.warning("⚠️ Você precisa vincular matérias ao seu perfil antes de usar o Modo Prova.")
+        st.info("Acesse a aba **Cronograma** no menu lateral para escolher suas matérias.")
+        return
+    
     # Em vez de salvar arquivo local, usaremos state em memória ou um state file por user_id. 
     # Para o MVP do Supabase, session_state é suficiente, mas se o arquivo for necessário:
     STATE_FILE = f"data/bancos/simulado_estado_{user.id}.json"
@@ -56,10 +62,14 @@ def render(DB_PATH=None):
             
     modo_prova = "Prova por Tema"
     
-    # Carregar Grupos do Supabase
-    grupos_resp = supabase.table("grupos").select("nome").execute().data
-    df_temas = pd.DataFrame(grupos_resp)
-    
+    # Carregar apenas Grupos vinculados ao usuário
+    resp_a = supabase.table("aprendizado_item").select("itens_estudo!inner(subgrupos!inner(grupos!inner(nome)))").eq("user_id", user.id).execute().data
+    grupos_atuais = set()
+    for a in resp_a:
+        if a.get('itens_estudo') and a['itens_estudo'].get('subgrupos'):
+            grupos_atuais.add(a['itens_estudo']['subgrupos']['grupos']['nome'])
+            
+    df_temas = pd.DataFrame([{"nome": g} for g in sorted(list(grupos_atuais))])
     tema_selecionado = None
     subgrupos_selecionados = []
     
