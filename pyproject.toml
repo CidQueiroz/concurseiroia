@@ -1,0 +1,6 @@
+[tool.semantic_release]
+version_variables = [
+    "app.py:__version__"
+]
+build_command = ""
+upload_to_vcs_release = true

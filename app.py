@@ -1,3 +1,4 @@
+__version__ = "1.0.0"
 import streamlit as st
 from backend.db import get_supabase
 
@@ -8,18 +9,20 @@ supabase = get_supabase()
 import os
 import json
 
-SESSION_FILE = "data/bancos/session_local.json"
+
+from streamlit_cookies_controller import CookieController
+cookie_controller = CookieController()
 
 if "user" not in st.session_state:
     st.session_state["user"] = None
-    # Auto-login
-    if os.path.exists(SESSION_FILE):
+
+# Tenta carregar o cookie de sessão para auto-login se não estiver logado na memória
+if st.session_state["user"] is None:
+    creds = cookie_controller.get('concurso_session')
+    if creds and isinstance(creds, dict) and creds.get("email") and creds.get("password"):
         try:
-            with open(SESSION_FILE, "r") as f:
-                creds = json.load(f)
-            if creds.get("email") and creds.get("password"):
-                res = supabase.auth.sign_in_with_password({"email": creds["email"], "password": creds["password"]})
-                st.session_state["user"] = res.user
+            res = supabase.auth.sign_in_with_password({"email": creds["email"], "password": creds["password"]})
+            st.session_state["user"] = res.user
         except Exception:
             pass
 
@@ -39,8 +42,7 @@ def render_login():
                     try:
                         res = supabase.auth.sign_in_with_password({"email": email, "password": senha})
                         st.session_state["user"] = res.user
-                        with open(SESSION_FILE, "w") as f:
-                            json.dump({"email": email, "password": senha}, f)
+                        cookie_controller.set('concurso_session', {"email": email, "password": senha})
                         st.rerun()
                     except Exception as e:
                         st.error(f"Erro no login. Verifique suas credenciais. Detalhes: {e}")
@@ -74,8 +76,7 @@ st.sidebar.markdown(f"👤 **Logado:** {st.session_state['user'].email.split('@'
 if st.sidebar.button("🚪 Sair da Conta", use_container_width=True):
     supabase.auth.sign_out()
     st.session_state["user"] = None
-    if os.path.exists(SESSION_FILE):
-        os.remove(SESSION_FILE)
+    cookie_controller.remove('concurso_session')
     st.rerun()
 
 st.sidebar.markdown("---")
