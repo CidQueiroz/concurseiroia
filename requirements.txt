@@ -12,3 +12,5 @@ langchain-google-genai
 chromadb
 sentence-transformers
 supabase
+
+streamlit-cookies-controller
