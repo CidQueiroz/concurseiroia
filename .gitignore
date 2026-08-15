@@ -16,9 +16,13 @@ data/bancos/simulado_estado*.json
 data/bancos/cookies.json
 
 # Bancos de Dados Locais Antigos e Backups
-# Como algumas abas (Cronograma, Diagnóstico) ainda podem usar o DB_PATH local,
-# estamos permitindo apenas o 'db_novo.sqlite' e 'conteudo_estudo.sqlite' subirem pro Github.
 data/bancos/db.sqlite
 data/bancos/db_backup*.sqlite
 data/bancos/banco_questoes.sqlite
 data/bancos/questoes_estudegratis.db
+data/edital/*
+data/processados/*
+data/questoes/*
+data/resumos/*
+data/cooldowns.json
+data/raw
