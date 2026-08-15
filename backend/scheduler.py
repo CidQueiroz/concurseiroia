@@ -206,12 +206,7 @@ def get_resumo(user_id, item_id):
 def montar_plano_diario(user_id):
     inicializar_itens(user_id)
     supabase = get_supabase()
-    
-    # Recalcular prioridades
-    resp_ids = supabase.table("aprendizado_item").select("item_id").eq("user_id", user_id).execute().data
-    for s in resp_ids:
-        calcular_prioridade(user_id, s['item_id'])
-        
+    # Recalcular prioridades foi movido para memória para evitar N+1 HTTP requests
     df_todos_raw = supabase.table("aprendizado_item").select("*, itens_estudo!inner(nome, subgrupos!inner(nome, grupos!inner(nome)))").eq("user_id", user_id).execute().data
     
     data_list = []
@@ -221,6 +216,25 @@ def montar_plano_diario(user_id):
                 a['item_nome'] = a['itens_estudo']['nome']
                 a['subgrupo_nome'] = a['itens_estudo']['subgrupos']['nome']
                 a['grupo_nome'] = a['itens_estudo']['subgrupos']['grupos']['nome']
+                
+                # Calcular prioridade on the fly
+                peso = _get_peso_grupo(a['grupo_nome'])
+                ult_rev_str = a.get('ultima_revisao')
+                if ult_rev_str:
+                    try:
+                        ultima_rev = datetime.fromisoformat(ult_rev_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                        dias_sem_revisao = max(1.0, (datetime.now() - ultima_rev).days)
+                    except:
+                        dias_sem_revisao = 1.0
+                else:
+                    dias_sem_revisao = 1.0
+                    
+                tx_acerto = float(a.get('taxa_acerto', 0.0)) / 100.0 if a.get('taxa_acerto', 0.0) > 0 else 0.0
+                fator_erro = max(0.1, 1.0 - tx_acerto)
+                fator_dificuldade = float(a.get('fator_dificuldade', 1.0))
+                
+                a['prioridade'] = peso * dias_sem_revisao * fator_erro * fator_dificuldade
+                
                 del a['itens_estudo']
                 data_list.append(a)
                 
