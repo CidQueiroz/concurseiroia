@@ -3,7 +3,7 @@ import streamlit as st
 from backend.db import get_supabase
 
 # Configuração da página e inicialização
-st.set_page_config(page_title="Concurseiro AI", layout="wide")
+st.set_page_config(page_title="Concurseiro IA", layout="wide")
 supabase = get_supabase()
 
 import os
@@ -27,7 +27,7 @@ if st.session_state["user"] is None:
             pass
 
 def render_login():
-    st.title("Concurseiro AI 🎯")
+    st.title("Concurseiro IA 🎯")
     st.subheader("Plataforma de Estudos Inteligente")
     
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -72,7 +72,7 @@ from modules import hoje, modo_prova, estatisticas, gerenciador, cronograma, dia
 # Variável de compatibilidade para os módulos que ainda não foram refatorados
 DB_PATH = "data/bancos/db_novo.sqlite"
 
-st.sidebar.title("Concurseiro AI 🎯")
+st.sidebar.title("Concurseiro IA 🎯")
 st.sidebar.markdown(f"👤 **Logado:** {st.session_state['user'].email.split('@')[0]}")
 if st.sidebar.button("🚪 Sair da Conta", use_container_width=True):
     supabase.auth.sign_out()
