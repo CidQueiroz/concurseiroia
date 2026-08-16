@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.2.0 (2026-08-16)
+
+### Features
+
+- Implementa validação de campos na cadastro
+  ([`1239925`](https://github.com/CidQueiroz/concurseiroia/commit/1239925b220e88b60613abbfa9ca7aa3d243b3fb))
+
+
 ## v1.1.2 (2026-08-16)
 
 ### Bug Fixes
