@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.1.2 (2026-08-16)
+
+### Bug Fixes
+
+- Corrigido erro na validação de e-mail
+  ([`d77d08c`](https://github.com/CidQueiroz/concurseiroia/commit/d77d08ced78f81f221e37379868a71bd71ac4d4f))
+
+
 ## v1.1.1 (2026-08-16)
 
 ### Bug Fixes
