@@ -1,0 +1,62 @@
+{
+  "nodes": [
+    {"id": "app", "label": "app.py", "group": "UI", "description": "Entry point, Streamlit navigation, Auth UI"},
+    {"id": "db", "label": "backend/db.py", "group": "Backend", "description": "Supabase client connection & session management"},
+    {"id": "scheduler", "label": "backend/scheduler.py", "group": "Backend", "description": "AMV 2.0 Spaced repetition core logic"},
+    {"id": "cookies", "label": "modules/cookies.py", "group": "Utility", "description": "Auth cookie persistence"},
+    {"id": "cronograma", "label": "modules/cronograma.py", "group": "UI", "description": "Subject selection & syllabus tracking"},
+    {"id": "estatisticas", "label": "modules/estatisticas.py", "group": "UI", "description": "Analytics & progression charts"},
+    {"id": "gerenciador", "label": "modules/gerenciador.py", "group": "UI", "description": "Admin dashboard for question DB"},
+    {"id": "hoje", "label": "modules/hoje.py", "group": "UI", "description": "Daily study tasks (New & Reviews)"},
+    {"id": "modo_prova", "label": "modules/modo_prova.py", "group": "UI", "description": "Quiz simulation & testing environment"},
+    {"id": "resumo_ia", "label": "modules/resumo_ia.py", "group": "Utility", "description": "AI-generated summaries via LLMs"},
+    {"id": "supabase", "label": "Supabase DB", "group": "Database", "description": "Remote database (Auth, questoes, aprendizado_item)"}
+  ],
+  "edges": [
+    {"source": "app", "target": "cookies", "label": "reads/writes"},
+    {"source": "app", "target": "db", "label": "authenticates"},
+    {"source": "app", "target": "cronograma", "label": "routes to"},
+    {"source": "app", "target": "estatisticas", "label": "routes to"},
+    {"source": "app", "target": "gerenciador", "label": "routes to"},
+    {"source": "app", "target": "hoje", "label": "routes to"},
+    {"source": "app", "target": "modo_prova", "label": "routes to"},
+    {"source": "cronograma", "target": "scheduler", "label": "initializes subjects"},
+    {"source": "cronograma", "target": "supabase", "label": "fetches groups"},
+    {"source": "estatisticas", "target": "supabase", "label": "queries stats"},
+    {"source": "gerenciador", "target": "supabase", "label": "CRUD questions"},
+    {"source": "hoje", "target": "scheduler", "label": "gets daily plan"},
+    {"source": "hoje", "target": "supabase", "label": "fetches tasks"},
+    {"source": "modo_prova", "target": "scheduler", "label": "processes answers"},
+    {"source": "modo_prova", "target": "supabase", "label": "queries questions"},
+    {"source": "scheduler", "target": "db", "label": "gets client"},
+    {"source": "scheduler", "target": "supabase", "label": "updates AMV state"},
+    {"source": "scheduler", "target": "resumo_ia", "label": "generates notes"},
+    {"source": "db", "target": "supabase", "label": "connects"}
+  ],
+  "flows": [
+    {
+      "id": "flow_auth",
+      "name": "User Authentication",
+      "description": "User logs in, session is saved in cookies and Supabase client is configured.",
+      "steps": ["app", "cookies", "db", "supabase"]
+    },
+    {
+      "id": "flow_cronograma",
+      "name": "Subject Linking",
+      "description": "User selects subjects to study, initializing their AMV tracker.",
+      "steps": ["app", "cronograma", "supabase", "scheduler"]
+    },
+    {
+      "id": "flow_hoje",
+      "name": "Daily Study Routine",
+      "description": "User views daily tasks. Scheduler calculates spacing algorithms and fetches questions.",
+      "steps": ["app", "hoje", "scheduler", "db", "supabase", "resumo_ia"]
+    },
+    {
+      "id": "flow_prova",
+      "name": "Exam Simulation",
+      "description": "User takes a quiz, questions are fetched, and answers update the spaced repetition state.",
+      "steps": ["app", "modo_prova", "supabase", "scheduler", "db"]
+    }
+  ]
+}

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquitetura do Concurseiro IA</title>
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #0e1117;
+      --text-color: #fafafa;
+      --panel-bg: #1e2127;
+      --border-color: #333;
+      --accent: #ff4b4b;
+      --accent-hover: #ff6b6b;
+      --ui-node: #2196f3;
+      --backend-node: #4caf50;
+      --db-node: #ff9800;
+      --util-node: #9c27b0;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #header {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 60px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 10;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+
+    #header h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    #header .badge {
+      margin-left: 15px;
+      background: var(--accent);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+
+    .container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      padding-top: 60px;
+    }
+
+    #network {
+      flex: 1;
+      height: 100%;
+      background-color: var(--bg-color);
+      position: relative;
+    }
+
+    #sidebar {
+      width: 350px;
+      background-color: var(--panel-bg);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 5;
+    }
+
+    .section-title {
+      padding: 20px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .flow-item {
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .flow-item:hover {
+      background-color: rgba(255, 75, 75, 0.1);
+    }
+
+    .flow-item.active {
+      background-color: rgba(255, 75, 75, 0.2);
+      border-left: 4px solid var(--accent);
+    }
+
+    .flow-item h3 {
+      font-size: 1rem;
+      margin-bottom: 5px;
+    }
+
+    .flow-item p {
+      font-size: 0.85rem;
+      color: #aaa;
+      line-height: 1.4;
+    }
+
+    .flow-path {
+      margin-top: 10px;
+      font-size: 0.75rem;
+      color: #888;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .flow-path span {
+      background: #333;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    #tooltip {
+      position: absolute;
+      background: rgba(30, 33, 39, 0.95);
+      border: 1px solid var(--border-color);
+      padding: 15px;
+      border-radius: 8px;
+      pointer-events: none;
+      display: none;
+      z-index: 100;
+      max-width: 300px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+    }
+
+    #tooltip h3 {
+      font-size: 1.1rem;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    #tooltip .group-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      color: white;
+      font-weight: bold;
+    }
+
+    #tooltip p {
+      font-size: 0.9rem;
+      color: #ddd;
+      line-height: 1.5;
+    }
+
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(30, 33, 39, 0.8);
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(5px);
+      z-index: 10;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+      font-size: 0.85rem;
+    }
+
+    .legend-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    /* Scrollbar estilizada */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-color);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #666;
+    }
+    
+    .btn-reset {
+      margin: 15px 20px;
+      padding: 10px;
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    
+    .btn-reset:hover {
+      background: var(--accent);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="header">
+    <h1>Concurseiro IA</h1>
+    <span class="badge">Arquitetura Interativa</span>
+  </div>
+
+  <div class="container">
+    <div id="network">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background: var(--ui-node)"></div> Interface de Usuário (UI)</div>
+        <div class="legend-item"><div class="legend-color" style="background: var(--backend-node)"></div> Lógica / Backend</div>
+        <div class="legend-item"><div class="legend-color" style="background: var(--db-node)"></div> Banco de Dados</div>
+        <div class="legend-item"><div class="legend-color" style="background: var(--util-node)"></div> Utilitários / IA</div>
+      </div>
+      <div id="tooltip"></div>
+    </div>
+    
+    <div id="sidebar">
+      <div class="section-title">Fluxos Principais</div>
+      <div id="flows-container"></div>
+      <button class="btn-reset" onclick="resetHighlight()">Resetar Visualização</button>
+    </div>
+  </div>
+
+  <script>
+    // DADOS INJETADOS DIRETAMENTE (Self-contained)
+    const architectureData = {
+      "nodes": [
+        {"id": "app", "label": "app.py", "group": "UI", "description": "Entry point, Streamlit navigation, Auth UI e controle de sessão."},
+        {"id": "db", "label": "backend/db.py", "group": "Backend", "description": "Conexão com Supabase e gerenciamento de estado (singleton seguro por sessão)."},
+        {"id": "scheduler", "label": "backend/scheduler.py", "group": "Backend", "description": "Motor central do AMV 2.0 (Spaced Repetition), cálculos de prioridade e domínio."},
+        {"id": "cookies", "label": "modules/cookies.py", "group": "Utility", "description": "Persistência de cookies no navegador para manter usuário logado."},
+        {"id": "cronograma", "label": "modules/cronograma.py", "group": "UI", "description": "Seleção de grupos e visualização de tópicos estudados."},
+        {"id": "estatisticas", "label": "modules/estatisticas.py", "group": "UI", "description": "Gráficos com Altair e projeções de pontuação baseadas nas métricas."},
+        {"id": "gerenciador", "label": "modules/gerenciador.py", "group": "UI", "description": "Painel de administração exclusivo para gestão das questões."},
+        {"id": "hoje", "label": "modules/hoje.py", "group": "UI", "description": "Visualização do plano diário: tópicos novos e revisões programadas."},
+        {"id": "modo_prova", "label": "modules/modo_prova.py", "group": "UI", "description": "Ambiente de simulado e quiz por tema, bloqueado sem matérias."},
+        {"id": "resumo_ia", "label": "modules/resumo_ia.py", "group": "Utility", "description": "Integração com LLMs para gerar dicas e resumos de questões."},
+        {"id": "supabase", "label": "Supabase DB", "group": "Database", "description": "PostgreSQL Remoto. Contém autenticação (Auth), questões e itens de aprendizado."}
+      ],
+      "edges": [
+        {"source": "app", "target": "cookies", "label": "lê/salva sessão"},
+        {"source": "app", "target": "db", "label": "autentica"},
+        {"source": "app", "target": "cronograma", "label": "renderiza"},
+        {"source": "app", "target": "estatisticas", "label": "renderiza"},
+        {"source": "app", "target": "gerenciador", "label": "renderiza"},
+        {"source": "app", "target": "hoje", "label": "renderiza"},
+        {"source": "app", "target": "modo_prova", "label": "renderiza"},
+        {"source": "cronograma", "target": "scheduler", "label": "inicializa matrizes"},
+        {"source": "cronograma", "target": "supabase", "label": "lê grupos"},
+        {"source": "estatisticas", "target": "supabase", "label": "queries de métricas"},
+        {"source": "gerenciador", "target": "supabase", "label": "CRUD banco"},
+        {"source": "hoje", "target": "scheduler", "label": "monta plano diário"},
+        {"source": "hoje", "target": "supabase", "label": "busca questões"},
+        {"source": "modo_prova", "target": "scheduler", "label": "processa resposta"},
+        {"source": "modo_prova", "target": "supabase", "label": "filtra questões"},
+        {"source": "scheduler", "target": "db", "label": "instancia cliente"},
+        {"source": "scheduler", "target": "supabase", "label": "atualiza state AMV"},
+        {"source": "scheduler", "target": "resumo_ia", "label": "solicita resumos"},
+        {"source": "db", "target": "supabase", "label": "conecta (REST/PostgREST)"}
+      ],
+      "flows": [
+        {
+          "id": "flow_auth",
+          "name": "Autenticação",
+          "description": "Usuário loga no app.py, os cookies salvam credenciais locais e o db.py conecta via Supabase Auth guardando a sessão.",
+          "steps": ["app", "cookies", "db", "supabase"]
+        },
+        {
+          "id": "flow_cronograma",
+          "name": "Vinculação de Matérias",
+          "description": "O usuário escolhe matérias, e o scheduler inicializa as planilhas de estudo (aprendizado_item) no banco de dados.",
+          "steps": ["app", "cronograma", "supabase", "scheduler"]
+        },
+        {
+          "id": "flow_hoje",
+          "name": "Estudo Diário",
+          "description": "O motor calcula o Spaced Repetition e fornece as atividades de retenção e revisão pro dia atual.",
+          "steps": ["app", "hoje", "scheduler", "db", "supabase", "resumo_ia"]
+        },
+        {
+          "id": "flow_prova",
+          "name": "Simulado",
+          "description": "Módulo de prova carrega temas válidos do Supabase, o usuário responde, e o scheduler atualiza níveis de domínio.",
+          "steps": ["app", "modo_prova", "supabase", "scheduler", "db"]
+        }
+      ]
+    };
+
+    // Configuração de Cores por Grupo
+    const groupColors = {
+      "UI": { background: "#2196f3", border: "#1976d2", highlight: "#64b5f6" },
+      "Backend": { background: "#4caf50", border: "#388e3c", highlight: "#81c784" },
+      "Database": { background: "#ff9800", border: "#f57c00", highlight: "#ffb74d" },
+      "Utility": { background: "#9c27b0", border: "#7b1fa2", highlight: "#ba68c8" }
+    };
+
+    // Preparando Nós e Arestas para o Vis.js
+    const nodes = new vis.DataSet(architectureData.nodes.map(n => ({
+      id: n.id,
+      label: n.label,
+      group: n.group,
+      color: groupColors[n.group],
+      font: { color: "#fff", face: "Roboto" },
+      shape: n.group === "Database" ? "cylinder" : "box",
+      margin: 10,
+      borderWidth: 2,
+      shadow: true,
+      description: n.description // Custom data
+    })));
+
+    const edges = new vis.DataSet(architectureData.edges.map(e => ({
+      id: `${e.source}-${e.target}`,
+      from: e.source,
+      to: e.target,
+      label: e.label,
+      arrows: "to",
+      font: { size: 10, color: "#aaa", align: "middle" },
+      color: { color: "#555", highlight: "#ff4b4b" },
+      smooth: { type: "cubicBezier", forceDirection: "horizontal" }
+    })));
+
+    // Instanciando a Rede
+    const container = document.getElementById('network');
+    const data = { nodes, edges };
+    const options = {
+      physics: {
+        forceAtlas2Based: { gravitationalConstant: -50, centralGravity: 0.01, springLength: 100, springConstant: 0.08 },
+        solver: "forceAtlas2Based",
+        stabilization: { iterations: 150 }
+      },
+      layout: { randomSeed: 2 },
+      interaction: { hover: true, tooltipDelay: 200 }
+    };
+    
+    const network = new vis.Network(container, data, options);
+
+    // Lógica do Tooltip Personalizado
+    const tooltip = document.getElementById('tooltip');
+    
+    network.on("hoverNode", function (params) {
+      const nodeId = params.node;
+      const node = nodes.get(nodeId);
+      if(!node) return;
+      
+      tooltip.innerHTML = `
+        <span class="group-badge" style="background-color: ${groupColors[node.group].background}">${node.group}</span>
+        <h3>${node.label}</h3>
+        <p>${node.description}</p>
+      `;
+      tooltip.style.display = 'block';
+    });
+    
+    network.on("blurNode", function () {
+      tooltip.style.display = 'none';
+    });
+    
+    // Posicionamento do Tooltip seguindo o mouse no canvas
+    container.addEventListener("mousemove", function(e) {
+      if(tooltip.style.display === 'block') {
+        const offset = 15;
+        let left = e.clientX + offset;
+        let top = e.clientY + offset;
+        
+        // Evita sair da tela
+        const rect = tooltip.getBoundingClientRect();
+        if (left + rect.width > window.innerWidth) left = window.innerWidth - rect.width - 10;
+        if (top + rect.height > window.innerHeight) top = window.innerHeight - rect.height - 10;
+        
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+      }
+    });
+
+    // Construção do Painel Lateral de Fluxos
+    const flowsContainer = document.getElementById('flows-container');
+    
+    architectureData.flows.forEach(flow => {
+      const el = document.createElement('div');
+      el.className = 'flow-item';
+      el.id = flow.id;
+      
+      const pathHtml = flow.steps.map(s => `<span>${s}</span>`).join(' ➔ ');
+      
+      el.innerHTML = `
+        <h3>${flow.name}</h3>
+        <p>${flow.description}</p>
+        <div class="flow-path">${pathHtml}</div>
+      `;
+      
+      el.onclick = () => highlightFlow(flow);
+      flowsContainer.appendChild(el);
+    });
+
+    // Sistema de Destaque
+    let activeFlowId = null;
+
+    function highlightFlow(flow) {
+      // Remover classes ativas anteriores
+      document.querySelectorAll('.flow-item').forEach(el => el.classList.remove('active'));
+      document.getElementById(flow.id).classList.add('active');
+      activeFlowId = flow.id;
+
+      // Resetar todos
+      const allNodes = nodes.get();
+      const allEdges = edges.get();
+      
+      const updatedNodes = [];
+      const updatedEdges = [];
+
+      // Opacidade baixa para os que não participam
+      allNodes.forEach(n => {
+        const inFlow = flow.steps.includes(n.id);
+        updatedNodes.push({
+          id: n.id,
+          color: {
+            background: inFlow ? groupColors[n.group].highlight : "#333",
+            border: inFlow ? groupColors[n.group].border : "#222"
+          },
+          font: { color: inFlow ? "#fff" : "#555" },
+          shadow: inFlow
+        });
+      });
+
+      // Identificar quais arestas pertencem ao fluxo
+      // Uma aresta pertence ao fluxo se a sequência (source -> target) ocorre no array flow.steps
+      // Ou mais genericamente, se source e target estão no fluxo (para simplificar visualmente)
+      allEdges.forEach(e => {
+        const sourceInFlow = flow.steps.includes(e.from);
+        const targetInFlow = flow.steps.includes(e.to);
+        
+        // Vamos checar se o caminho exato existe para dar aquele brilho forte
+        let isDirectPath = false;
+        for(let i=0; i<flow.steps.length-1; i++) {
+          if((e.from === flow.steps[i] || e.from === 'app' && flow.steps.includes(e.to)) && targetInFlow) {
+            isDirectPath = true; // Aproximação generosa para destacar as conexões do fluxo
+          }
+        }
+        
+        const inFlow = sourceInFlow && targetInFlow;
+        
+        updatedEdges.push({
+          id: e.id,
+          color: { color: inFlow ? "#ff4b4b" : "#222" },
+          width: inFlow ? 3 : 1,
+          font: { color: inFlow ? "#ff4b4b" : "transparent" }
+        });
+      });
+
+      nodes.update(updatedNodes);
+      edges.update(updatedEdges);
+      
+      // Centraliza e dá zoom nos nós do fluxo
+      network.fit({
+        nodes: flow.steps,
+        animation: { duration: 800, easingFunction: "easeInOutQuad" }
+      });
+    }
+
+    function resetHighlight() {
+      document.querySelectorAll('.flow-item').forEach(el => el.classList.remove('active'));
+      activeFlowId = null;
+
+      const updatedNodes = nodes.get().map(n => ({
+        id: n.id,
+        color: groupColors[n.group],
+        font: { color: "#fff" },
+        shadow: true
+      }));
+
+      const updatedEdges = edges.get().map(e => ({
+        id: e.id,
+        color: { color: "#555" },
+        width: 1,
+        font: { color: "#aaa" }
+      }));
+
+      nodes.update(updatedNodes);
+      edges.update(updatedEdges);
+      
+      network.fit({
+        animation: { duration: 800, easingFunction: "easeInOutQuad" }
+      });
+    }
+  </script>
+</body>
+</html>
