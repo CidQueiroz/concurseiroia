@@ -39,7 +39,7 @@ def render(DB_PATH=None):
     st.header("Gerenciador de Questões 🛠️")
     st.markdown("Busque questões por tema ou por palavra-chave para editar o gabarito, o enunciado ou removê-las do banco.")
     
-    tab_busca, tab_tema, tab_add = st.tabs(["Busca por Texto", "Filtro por Tema", "Adicionar Questão"])
+    tab_busca, tab_tema, tab_add, tab_limpeza = st.tabs(["Busca por Texto", "Filtro por Tema", "Adicionar Questão", "Limpeza de Tópicos"])
     
     if "gerenciador_results" not in st.session_state:
         st.session_state.gerenciador_results = pd.DataFrame()
@@ -318,3 +318,33 @@ def render(DB_PATH=None):
                         supabase.table("questoes").update({"valida": -1}).eq("id", q_id).execute()
                         st.warning("Questão invalidada! Pesquise novamente para atualizar a lista.")
 
+    with tab_limpeza:
+        st.subheader("Renomear Tópicos Genéricos")
+        st.write("Abaixo estão listados todos os itens de estudo chamados 'Tópicos Gerais'. Renomeie-os para assuntos mais específicos de acordo com a sua preferência.")
+        
+        resp_tg = supabase.table("itens_estudo").select("id, nome, subgrupos(nome, grupos(nome))").ilike("nome", "Tópicos Gerais").execute()
+        
+        if not resp_tg.data:
+            st.success("🎉 Nenhum tópico genérico encontrado! O banco está super organizado.")
+        else:
+            st.info(f"Foram encontrados {len(resp_tg.data)} tópicos genéricos. Expanda cada um para renomear.")
+            for idx, tg in enumerate(resp_tg.data):
+                item_id = tg['id']
+                sub_nome = tg['subgrupos']['nome'] if tg.get('subgrupos') else "Desconhecido"
+                g_nome = tg['subgrupos']['grupos']['nome'] if tg.get('subgrupos') and tg['subgrupos'].get('grupos') else "Desconhecido"
+                
+                with st.expander(f"📚 {g_nome} ➔ {sub_nome} (Item #{item_id})"):
+                    col_input, col_btn = st.columns([3, 1])
+                    with col_input:
+                        novo_nome = st.text_input("Novo Nome Específico", value="", placeholder="Digite o assunto exato...", key=f"novo_nome_{item_id}")
+                    with col_btn:
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        if st.button("Renomear", key=f"btn_salvar_{item_id}", type="primary", use_container_width=True):
+                            if novo_nome.strip() and novo_nome.strip().lower() != "tópicos gerais":
+                                try:
+                                    supabase.table("itens_estudo").update({"nome": novo_nome.strip()}).eq("id", item_id).execute()
+                                    st.success(f"Renomeado com sucesso!")
+                                except Exception as e:
+                                    st.error(f"Erro ao renomear: {e}")
+                            else:
+                                st.error("Digite um nome válido.")

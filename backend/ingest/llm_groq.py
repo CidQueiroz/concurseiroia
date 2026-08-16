@@ -25,7 +25,7 @@ def get_current_llm():
     chave = CHAVES[current_key_idx]
     # Llama 3 70B ou 8B. O 8B é absurdamente mais rápido para parsing, mas o 70B é mais assertivo. 
     # Como queremos altíssima velocidade e a tarefa é só extração, podemos usar o 70b-versatile ou 8b-instant.
-    return ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0, api_key=chave)
+    return ChatGroq(model_name="gpt-oss-120b", temperature=0, api_key=chave)
 
 def alternar_chave():
     global current_key_idx

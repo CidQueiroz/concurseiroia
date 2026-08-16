@@ -40,7 +40,7 @@ def get_llm_pool(temperature=0.1, json_mode=False, prefer_gemini=False):
     # 1. Chave Principal do App (Groq)
     k_main = user_groq_key if user_groq_key else os.getenv("GROQ_API_KEY")
     if k_main:
-        kwargs = {"model_name": "llama-3.3-70b-versatile", "temperature": temperature, "api_key": k_main}
+        kwargs = {"model_name": "gpt-oss-120b", "temperature": temperature, "api_key": k_main}
         if json_mode:
             kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
         groq_pool.append({
@@ -326,7 +326,7 @@ def conselho_tutor_ia(dados_estatisticos, erros_detalhados, stream=False):
     from backend.prompts.tutor import get_prompt_conselho_tutor
     prompt = get_prompt_conselho_tutor(dados_estatisticos, erros_detalhados)
     
-    pool = get_llm_pool(temperature=0.3)
+    pool = get_llm_pool(temperature=0.3, prefer_gemini=True)
     
     for info in pool:
         try:

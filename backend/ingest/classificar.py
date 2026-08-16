@@ -61,7 +61,7 @@ for i in range(1, 9):
         llm_pool.append({
             "name": f"Groq (Chave {i})",
             "key_id": key_id,
-            "llm": ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0, api_key=k, timeout=30, max_retries=0)
+            "llm": ChatGroq(model_name="gpt-oss-120b", temperature=0, api_key=k, timeout=30, max_retries=0)
         })
 
 # 2. OpenRouter models

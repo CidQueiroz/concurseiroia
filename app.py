@@ -10,14 +10,14 @@ import os
 import json
 
 
-from streamlit_cookies_controller import CookieController
-cookie_controller = CookieController()
+from modules.cookies import get_cookie_controller
 
 if "user" not in st.session_state:
     st.session_state["user"] = None
 
 # Tenta carregar o cookie de sessão para auto-login se não estiver logado na memória
 if st.session_state["user"] is None:
+    cookie_controller = get_cookie_controller()
     creds = cookie_controller.get('concurso_session')
     if creds and isinstance(creds, dict) and creds.get("email") and creds.get("password"):
         try:
@@ -42,6 +42,7 @@ def render_login():
                     try:
                         res = supabase.auth.sign_in_with_password({"email": email, "password": senha})
                         st.session_state["user"] = res.user
+                        cookie_controller = get_cookie_controller()
                         cookie_controller.set('concurso_session', {"email": email, "password": senha})
                         st.rerun()
                     except Exception as e:
@@ -76,6 +77,7 @@ st.sidebar.markdown(f"👤 **Logado:** {st.session_state['user'].email.split('@'
 if st.sidebar.button("🚪 Sair da Conta", use_container_width=True):
     supabase.auth.sign_out()
     st.session_state["user"] = None
+    cookie_controller = get_cookie_controller()
     cookie_controller.remove('concurso_session')
     st.rerun()
 

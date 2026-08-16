@@ -25,7 +25,7 @@ idx_groq = 0
 def get_groq_llm():
     if not CHAVES_GROQ: return None
     return ChatGroq(
-        model="llama-3.3-70b-versatile",
+        model="gpt-oss-120b",
         temperature=0,
         api_key=CHAVES_GROQ[idx_groq],
         max_retries=0

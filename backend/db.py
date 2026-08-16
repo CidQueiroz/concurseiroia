@@ -21,7 +21,8 @@ def get_supabase() -> Client:
     
     # Se o usuário já tiver credenciais salvas (ex: sobreviveu a um hot reload), re-autentica
     if "user" in st.session_state and st.session_state["user"] is not None:
-        from modules.cookies import cookie_controller
+        from modules.cookies import get_cookie_controller
+        cookie_controller = get_cookie_controller()
         creds = cookie_controller.get('concurso_session')
         if creds and isinstance(creds, dict) and creds.get("email") and creds.get("password"):
             try:
