@@ -3,6 +3,42 @@ import pandas as pd
 import datetime
 from backend.db import get_supabase
 
+@st.cache_data(ttl=600, show_spinner=False)
+def buscar_progresso_banco():
+    supabase = get_supabase()
+    total_q = supabase.table("questoes").select("id", count="exact").execute().count or 0
+    validadas = supabase.table("questoes").select("id", count="exact").eq("valida", 1).execute().count or 0
+    removidas = supabase.table("questoes").select("id", count="exact").eq("valida", -1).execute().count or 0
+    nao_validadas = total_q - validadas - removidas
+    return validadas, nao_validadas, removidas
+
+@st.cache_data(ttl=600, show_spinner=False)
+def buscar_distribuicao_banco():
+    supabase = get_supabase()
+    resp_dist = supabase.table("questoes").select("id, itens_estudo(nome, subgrupos(nome, grupos(nome)))").execute().data
+    dist_data = []
+    for q in resp_dist:
+        if q.get('itens_estudo') and q['itens_estudo'].get('subgrupos') and q['itens_estudo']['subgrupos'].get('grupos'):
+            dist_data.append({
+                "Grupo": q['itens_estudo']['subgrupos']['grupos']['nome'],
+                "Subgrupo": q['itens_estudo']['subgrupos']['nome'],
+                "Item": q['itens_estudo']['nome'],
+                "id": q['id']
+            })
+    return pd.DataFrame(dist_data)
+
+@st.cache_data(ttl=600, show_spinner=False)
+def buscar_historico_respostas(user_id):
+    supabase = get_supabase()
+    resp = supabase.table("respostas").select("id, questao_id, acertou, tempo_segundos, data, questoes(itens_estudo(nome, subgrupos(nome, grupos(nome))))").eq("user_id", user_id).execute().data
+    return resp
+
+@st.cache_data(ttl=600, show_spinner=False)
+def buscar_aprendizado_item(user_id):
+    supabase = get_supabase()
+    resp = supabase.table("aprendizado_item").select("*, itens_estudo(nome, subgrupos(nome, grupos(nome)))").eq("user_id", user_id).execute().data
+    return resp
+
 def render(DB_PATH=None):
     supabase = get_supabase()
     user = st.session_state.get("user")
@@ -16,10 +52,7 @@ def render(DB_PATH=None):
     
     if is_admin:
         # 1. Progresso do Banco (Global, não depende do user)
-        total_q = supabase.table("questoes").select("id", count="exact").execute().count or 0
-        validadas = supabase.table("questoes").select("id", count="exact").eq("valida", 1).execute().count or 0
-        removidas = supabase.table("questoes").select("id", count="exact").eq("valida", -1).execute().count or 0
-        nao_validadas = total_q - validadas - removidas
+        validadas, nao_validadas, removidas = buscar_progresso_banco()
         
         st.subheader("Progresso do Banco de Questões 🗃️")
         colV1, colV2, colV3 = st.columns(3)
@@ -30,19 +63,7 @@ def render(DB_PATH=None):
         
         # 2. Distribuição do Banco
         st.subheader("Distribuição do Banco de Questões 📚")
-        resp_dist = supabase.table("questoes").select("id, itens_estudo(nome, subgrupos(nome, grupos(nome)))").execute().data
-        
-        dist_data = []
-        for q in resp_dist:
-            if q.get('itens_estudo') and q['itens_estudo'].get('subgrupos') and q['itens_estudo']['subgrupos'].get('grupos'):
-                dist_data.append({
-                    "Grupo": q['itens_estudo']['subgrupos']['grupos']['nome'],
-                    "Subgrupo": q['itens_estudo']['subgrupos']['nome'],
-                    "Item": q['itens_estudo']['nome'],
-                    "id": q['id']
-                })
-        
-        df_dist_raw = pd.DataFrame(dist_data)
+        df_dist_raw = buscar_distribuicao_banco()
         if not df_dist_raw.empty:
             df_dist = df_dist_raw.groupby(['Grupo', 'Subgrupo']).agg(Quantidade=('id', 'count')).reset_index()
             df_dist = df_dist.sort_values("Quantidade", ascending=False)
@@ -53,7 +74,7 @@ def render(DB_PATH=None):
         st.markdown("---")
     
     # 3. Buscando respostas do Usuario logado
-    resp_respostas = supabase.table("respostas").select("id, questao_id, acertou, tempo_segundos, data, questoes(itens_estudo(nome, subgrupos(nome, grupos(nome))))").eq("user_id", user.id).execute().data
+    resp_respostas = buscar_historico_respostas(user.id)
     
     resp_data = []
     for r in resp_respostas:
@@ -84,7 +105,7 @@ def render(DB_PATH=None):
         tx_acerto = 0
         
     # 4. Métricas de Desempenho por Matéria (apenas vinculadas)
-    resp_a = supabase.table("aprendizado_item").select("itens_estudo!inner(subgrupos!inner(grupos!inner(nome)))").eq("user_id", user.id).execute().data
+    resp_a = buscar_aprendizado_item(user.id)
     grupos_atuais = set()
     for a in resp_a:
         if a.get('itens_estudo') and a['itens_estudo'].get('subgrupos'):
@@ -197,7 +218,11 @@ def render(DB_PATH=None):
     st.markdown("---")
     st.subheader("Índice de Domínio (AMV 2.0) 🧠")
     
-    resp_amv = supabase.table("aprendizado_item").select("*, itens_estudo(nome)").eq("user_id", user.id).neq("status", "NOVO").order("nivel_dominio", desc=True).execute().data
+    resp_amv = buscar_aprendizado_item(user.id)
+    # Filtra localmente o que nao for NOVO
+    resp_amv = [x for x in resp_amv if x.get("status") != "NOVO"]
+    # Ordena localmente
+    resp_amv = sorted(resp_amv, key=lambda x: x.get("nivel_dominio", 0), reverse=True)
     
     amv_data = []
     for a in resp_amv:
