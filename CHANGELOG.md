@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.1.1 (2026-08-16)
+
+### Bug Fixes
+
+- Corrige bug na validação de formulário
+  ([`c5535c8`](https://github.com/CidQueiroz/concurseiroia/commit/c5535c894c65b42554830fe4655d43e672a6a40a))
+
+
 ## v1.1.0 (2026-08-15)
 
 ### Features
