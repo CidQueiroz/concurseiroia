@@ -77,7 +77,7 @@ def calcular_prioridade(user_id, item_id):
     supabase.table("aprendizado_item").update({"prioridade": prioridade}).eq("user_id", user_id).eq("item_id", item_id).execute()
     return prioridade
 
-def agendar_revisao(user_id, item_id, acertou=True):
+def agendar_revisao(user_id, item_id, acertou=True, contem_pegadinha=False):
     supabase = get_supabase()
     steps = [1, 3, 7, 15, 30, 60]
     
@@ -88,8 +88,13 @@ def agendar_revisao(user_id, item_id, acertou=True):
     status = resp[0].get('status', 'NOVO')
     
     if not acertou:
-        novo_num_revisoes = max(0, numero_revisoes - 2)
-        novo_status = 'REVISAO_1' if novo_num_revisoes > 0 else 'RETENCAO_INICIAL'
+        if contem_pegadinha:
+            # Penalidade severa: Volta para a retenção inicial imediatamente para recondicionar o gatilho amanhã.
+            novo_num_revisoes = 0
+            novo_status = 'RETENCAO_INICIAL'
+        else:
+            novo_num_revisoes = max(0, numero_revisoes - 2)
+            novo_status = 'REVISAO_1' if novo_num_revisoes > 0 else 'RETENCAO_INICIAL'
     else:
         novo_num_revisoes = numero_revisoes + 1
         if novo_num_revisoes == 1: novo_status = 'REVISAO_1'
@@ -151,7 +156,7 @@ def atualizar_dominio(user_id, item_id):
     
     supabase.table("aprendizado_item").update(updates).eq("user_id", user_id).eq("item_id", item_id).execute()
 
-def processar_resposta(user_id, questao_id, acertou):
+def processar_resposta(user_id, questao_id, acertou, contem_pegadinha=False):
     supabase = get_supabase()
     resp_q = supabase.table("questoes").select("item_id").eq("id", questao_id).execute().data
     if not resp_q or not resp_q[0].get('item_id'): 
@@ -195,7 +200,7 @@ def processar_resposta(user_id, questao_id, acertou):
     if status in ['NOVO', 'RECONHECIMENTO']:
         avancar_status(user_id, item_id, 'RETENCAO_INICIAL')
     elif status.startswith('REVISAO') or status == 'RETENCAO_INICIAL':
-        agendar_revisao(user_id, item_id, acertou)
+        agendar_revisao(user_id, item_id, acertou, contem_pegadinha)
         
     atualizar_dominio(user_id, item_id)
     calcular_prioridade(user_id, item_id)

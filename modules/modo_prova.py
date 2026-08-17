@@ -328,19 +328,33 @@ def render(DB_PATH=None):
                     else:
                         st.error("Você errou.")
                         
-                    col_next1, col_next2, col_next3 = st.columns([4, 4, 2])
+                    col_next1, col_next2, col_next3, col_next4 = st.columns([3, 3, 3, 2])
                     with col_next1:
                         btn_next = st.button("Próxima Questão", key=f"btn_next_{idx}")
                     with col_next2:
                         btn_mentoria = False
                         if not st.session_state.get("prova_chat_history"):
-                            btn_mentoria = st.button("Mentoria (Explicar Resposta)", key=f"btn_prova_analisar_{idx}")
+                            btn_mentoria = st.button("Mentoria", key=f"btn_prova_analisar_{idx}")
                     with col_next3:
+                        btn_raiox = False
+                        if not acertou and not st.session_state.get("prova_chat_history"):
+                            btn_raiox = st.button("🧠 Raio-X da Banca", key=f"btn_raiox_prova_{idx}")
+                    with col_next4:
                         btn_rem = False
                         if is_admin:
-                            btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_depois_prova_{idx}")
+                            btn_rem = st.button("🗑️ Remover", key=f"btn_rem_depois_prova_{idx}")
                         
-                    if btn_mentoria and not st.session_state.get("prova_chat_history"):
+                    if btn_raiox and not st.session_state.get("prova_chat_history"):
+                        from backend.llm import analisar_banca_ia
+                        b = q.get('banca', 'N/A')
+                        if not b or b == 'N/A' or b == 'NONE': b = "Não Especificada"
+                        st.markdown("### 🧠 Raio-X da Banca")
+                        with st.spinner("Desconstruindo a armadilha..."):
+                            analise_banca = analisar_banca_ia(b, q.get('enunciado', ''), opcoes, q.get('gabarito', 'A'))
+                            st.error(analise_banca)
+                            st.session_state.prova_chat_history = [{"role": "assistant", "content": analise_banca}]
+                        salvar_estado_simulado()
+                    elif btn_mentoria and not st.session_state.get("prova_chat_history"):
                         from backend.llm import explicar_erro
                         gab = str(q.get('gabarito', '')).strip().upper()
                         texto_correta = f"{gab}) {opcoes.get(gab, 'N/A')}" if gab in opcoes else "N/A"

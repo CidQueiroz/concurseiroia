@@ -74,6 +74,25 @@ DB_PATH = "data/bancos/db_novo.sqlite"
 
 st.sidebar.title("Concurseiro IA 🎯")
 st.sidebar.markdown(f"👤 **Logado:** {st.session_state['user'].email.split('@')[0]}")
+
+bancas_disponiveis = ["CEBRASPE", "CESGRANRIO", "FCC", "FGV", "IBFC", "VUNESP", "Geral", "Outra..."]
+banca_pref = st.session_state.get("banca_preferida", "Geral")
+
+if banca_pref in bancas_disponiveis:
+    banca_pref_index = bancas_disponiveis.index(banca_pref)
+    banca_custom_default = ""
+else:
+    banca_pref_index = bancas_disponiveis.index("Outra...")
+    banca_custom_default = banca_pref
+
+banca_sel = st.sidebar.selectbox("🎯 Banca Preferida (IA)", bancas_disponiveis, index=banca_pref_index)
+
+if banca_sel == "Outra...":
+    banca_custom = st.sidebar.text_input("Digite o nome da Banca:", value=banca_custom_default)
+    st.session_state["banca_preferida"] = banca_custom if banca_custom else "Geral"
+else:
+    st.session_state["banca_preferida"] = banca_sel
+
 if st.sidebar.button("🚪 Sair da Conta", use_container_width=True):
     supabase.auth.sign_out()
     st.session_state["user"] = None

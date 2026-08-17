@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎯 Concurseiro AI
+# 🎯 Concurseiro IA
 ### Plataforma de Estudos Inteligente para maximizar seu desempenho.
 
 ![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -15,7 +15,7 @@
 
 ## 🚀 Visão Geral
 
-O **Concurseiro AI** é uma Plataforma de Estudos Inteligente desenvolvida para auxiliar concurseiros em sua jornada de preparação. A aplicação utiliza inteligência artificial para fornecer diagnósticos precisos, simulados adaptativos, estatísticas de desempenho e gerenciamento eficiente do cronograma de estudos.
+O **Concurseiro IA** é uma Plataforma de Estudos Inteligente desenvolvida para auxiliar concurseiros em sua jornada de preparação. A aplicação utiliza inteligência artificial para fornecer diagnósticos precisos, simulados adaptativos, estatísticas de desempenho e gerenciamento eficiente do cronograma de estudos.
 
 O grande diferencial é transformar o estudo tradicional em um ecossistema orientado a dados, permitindo que o aluno acompanhe sua evolução de perto e identifique automaticamente pontos de melhoria com o auxílio de IA.
 
@@ -32,7 +32,7 @@ graph TD
         Student(Concurseiro)
     end
 
-    subgraph "Aplicação Concurseiro AI"
+    subgraph "Aplicação Concurseiro IA"
         App(Frontend: Streamlit)
         
         subgraph "Módulos"
@@ -133,7 +133,7 @@ streamlit run app.py
 
 ## 🤖 Uso de IA e Chaves de API (BYOK)
 
-O **Concurseiro AI** permite que você traga sua própria chave de API (Bring Your Own Key) para utilizar as funcionalidades de IA generativa.
+O **Concurseiro IA** permite que você traga sua própria chave de API (Bring Your Own Key) para utilizar as funcionalidades de IA generativa.
 No menu lateral, em **"⚙️ Chaves de API"**, você pode inserir suas próprias chaves para os provedores:
 *   **Groq API Key:** Modelos rápidos e ultra-eficientes.
 *   **Gemini API Key:** Modelos robustos do ecossistema Google.

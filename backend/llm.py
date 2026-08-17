@@ -100,14 +100,15 @@ def get_llm_pool(temperature=0.1, json_mode=False, prefer_gemini=False):
     return groq_pool + gemini_pool + openrouter_pool
 
 def explicar_erro(enunciado, alternativa_correta, alternativa_marcada, acertou=False, historico=None, stream=False):
+    banca = st.session_state.get("banca_preferida", "Geral") if HAS_STREAMLIT and hasattr(st, "session_state") else "Geral"
     if historico is None:
         historico = []
     if acertou:
         from backend.prompts.tutor import get_prompt_explicar_acerto
-        sys_prompt = get_prompt_explicar_acerto(enunciado, alternativa_correta)
+        sys_prompt = get_prompt_explicar_acerto(enunciado, alternativa_correta, banca)
     else:
         from backend.prompts.tutor import get_prompt_explicar_erro
-        sys_prompt = get_prompt_explicar_erro(enunciado, alternativa_correta, alternativa_marcada)
+        sys_prompt = get_prompt_explicar_erro(enunciado, alternativa_correta, alternativa_marcada, banca)
         
     from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
     messages = [SystemMessage(content=sys_prompt)]
@@ -191,8 +192,9 @@ def gerar_conteudo_estudo(grupo, subgrupo):
         return f"Erro ao gerar conteúdo via Nuvem e Local ({e2})"
 
 def gerar_questao_inedita(grupo, subgrupo):
+    banca = st.session_state.get("banca_preferida", "FGV") if HAS_STREAMLIT and hasattr(st, "session_state") else "FGV"
     from backend.prompts.tutor import get_prompt_gerar_questao
-    prompt = get_prompt_gerar_questao(grupo, subgrupo)
+    prompt = get_prompt_gerar_questao(grupo, subgrupo, banca)
     
     pool = get_llm_pool(temperature=0.7, json_mode=True)
     
@@ -257,10 +259,11 @@ def resolver_gabarito_ia(enunciado, alternativas):
     return "A"  # Fallback seguro
 
 def mentoria_ia(enunciado, alternativas, letra_escolhida=None, historico=None, stream=False):
+    banca = st.session_state.get("banca_preferida", "Geral") if HAS_STREAMLIT and hasattr(st, "session_state") else "Geral"
     if historico is None:
         historico = []
     from backend.prompts.tutor import get_prompt_mentoria
-    sys_prompt = get_prompt_mentoria(enunciado, alternativas, letra_escolhida)
+    sys_prompt = get_prompt_mentoria(enunciado, alternativas, letra_escolhida, banca)
     
     from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
     messages = [SystemMessage(content=sys_prompt)]
@@ -371,5 +374,52 @@ def conselho_tutor_ia(dados_estatisticos, erros_detalhados, stream=False):
         msg = f"Falha ao acionar o Conselho do Tutor. Erro Local: {e2}"
         if stream:
             def err_gen(): yield msg
-            return err_gen()
         return msg
+
+PROMPT_ANALISE_BANCA = """
+Você é um especialista em engenharia reversa de bancas de concurso.
+Analise a questão abaixo considerando o estilo específico da banca {banca}.
+
+Enunciado: {enunciado}
+Alternativas: {alternativas}
+Gabarito Oficial: {gabarito}
+
+Entregue uma análise técnica e concisa estruturada em:
+1. Padrão da Banca: Identifique o vício típico da {banca} presente (ex: pegadinha por negação sutil, troca de uma única palavra, distrator de alta proximidade).
+2. Anatomia do Distrator: Explique qual alternativa foi desenhada para induzir ao erro e qual palavra-chave desclassifica essa opção.
+3. Regra de Ouro: Uma diretriz em 1 frase para não cair nesse padrão novamente.
+"""
+
+def analisar_banca_ia(banca, enunciado, alternativas, gabarito, stream=False):
+    prompt = PROMPT_ANALISE_BANCA.format(
+        banca=banca, 
+        enunciado=enunciado, 
+        alternativas=json.dumps(alternativas, ensure_ascii=False, indent=2), 
+        gabarito=gabarito
+    )
+    
+    pool = get_llm_pool(temperature=0.2, prefer_gemini=True)
+    
+    for info in pool:
+        try:
+            if stream:
+                stream_iter = info["llm"].stream(prompt)
+                first_chunk = next(stream_iter)
+                def generator():
+                    try:
+                        txt = _get_chunk_text(first_chunk)
+                        if txt: yield txt
+                        for chunk in stream_iter:
+                            txt = _get_chunk_text(chunk)
+                            if txt: yield txt
+                        yield f"\n\n*(Analisado por: {info['name']})*"
+                    except Exception as e:
+                        yield f"\n\n*(Erro na Análise: {str(e)})*"
+                return generator()
+            else:
+                return info["llm"].invoke(prompt).content + f"\n\n*(Analisado por: {info['name']})*"
+        except Exception as e:
+            print(f"[!] {info['name']} falhou na análise de banca. Erro: {e}")
+            continue
+            
+    return "Falha ao gerar o Raio-X da Banca."

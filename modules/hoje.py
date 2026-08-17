@@ -216,20 +216,35 @@ def render(DB_PATH=None):
                         else:
                             st.error("Você errou.")
                         
-                        col_d1, col_d2, col_d3 = st.columns([4, 4, 2])
+                        col_d1, col_d2, col_d3, col_d4 = st.columns([3, 3, 3, 2])
                         with col_d1:
                             btn_next = st.button("Avançar para o Próximo Tópico", key=f"btn_next_{idx}")
                         with col_d2:
-                            btn_mentoria = st.button("Mentoria (Ajude-me a pensar)", key=f"btn_analise_{idx}")
+                            btn_mentoria = st.button("Mentoria (Ajude-me)", key=f"btn_analise_{idx}")
                         with col_d3:
+                            btn_raiox = False
+                            if not r['acertou']:
+                                btn_raiox = st.button("🧠 Raio-X da Banca", key=f"btn_raiox_{idx}")
+                        with col_d4:
                             btn_rem = False
                             if is_admin:
-                                btn_rem = st.button("🗑️ Remover Questão", key=f"btn_rem_depois_{idx}")
+                                btn_rem = st.button("🗑️ Remover", key=f"btn_rem_depois_{idx}")
                             
                         if btn_mentoria:
                             from backend.llm import mentoria_ia
                             with st.spinner("Tutor IA analisando..."):
                                 st.info(mentoria_ia(q_json['enunciado'], opts, r['letra']))
+                                
+                        if btn_raiox:
+                            from backend.llm import analisar_banca_ia
+                            from backend.scheduler import agendar_revisao
+                            with st.spinner("Desconstruindo a armadilha..."):
+                                b = q_json.get('banca', 'N/A')
+                                if not b or b == 'N/A' or b == 'NONE': b = "Não Especificada"
+                                analise_banca = analisar_banca_ia(b, q_json['enunciado'], opts, q_json.get('gabarito', 'A'))
+                                st.error(analise_banca)
+                                # Aplica penalidade retroativa (sobrepondo a revisão leve que já havia sido agendada)
+                                agendar_revisao(user.id, item['item_id'], acertou=False, contem_pegadinha=True)
                                 
                         if btn_next:
                             del st.session_state[k_q]

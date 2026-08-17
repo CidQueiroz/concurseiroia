@@ -1,6 +1,6 @@
-def get_prompt_explicar_acerto(enunciado: str, alternativa_correta: str) -> str:
+def get_prompt_explicar_acerto(enunciado: str, alternativa_correta: str, banca: str = "Geral") -> str:
     prompt = f"""Você é um professor sênior de concursos de TI.
-O aluno ACERTOU a questão. Sua missão é parabenizá-lo brevemente e reforçar o conceito.
+O aluno ACERTOU a questão. Sua missão é parabenizá-lo brevemente e reforçar o conceito considerando o padrão da banca {banca}.
 
 [QUESTÃO]
 {enunciado}
@@ -16,14 +16,14 @@ Responda OBRIGATORIAMENTE seguindo o exato formato Markdown abaixo:
 **Por que está correta?**
 (Explique o fundamento técnico que torna a alternativa correta).
 
-**Padrão de Prova (Atenção):**
-(Dica rápida de como as bancas tentam confundir esse conceito em provas).
+**Padrão de Prova ({banca}):**
+(Dica rápida de como essa banca tenta confundir esse conceito em provas).
 """
     return prompt
 
-def get_prompt_explicar_erro(enunciado: str, alternativa_correta: str, alternativa_marcada: str) -> str:
+def get_prompt_explicar_erro(enunciado: str, alternativa_correta: str, alternativa_marcada: str, banca: str = "Geral") -> str:
     prompt = f"""Você é um professor sênior de concursos de TI.
-Sua missão é explicar o erro do candidato de forma cirúrgica.
+Sua missão é explicar o erro do candidato de forma cirúrgica, focando na mentalidade da banca {banca}.
 
 [QUESTÃO]
 {enunciado}
@@ -42,8 +42,8 @@ Responda OBRIGATORIAMENTE seguindo o exato formato Markdown abaixo:
 **O Conceito Correto:**
 (Explique o fundamento técnico do gabarito correto, direto ao ponto).
 
-**Padrão de Prova (Atenção):**
-(Dica rápida de como as bancas tentam confundir esse conceito em provas).
+**Padrão de Prova ({banca}):**
+(Dica rápida de como essa banca tenta confundir esse conceito em provas).
 """
     return prompt
 
@@ -61,14 +61,14 @@ Responda em formato Markdown estruturado, sem saudações.
 """
 
 
-def get_prompt_gerar_questao(grupo: str, subgrupo: str) -> str:
-    return f"""Você é o mais temido e experiente examinador da banca FGV (Fundação Getulio Vargas) para provas de TI de alto nível (Auditor, Analista Sênior).
+def get_prompt_gerar_questao(grupo: str, subgrupo: str, banca: str = "FGV") -> str:
+    return f"""Você é o mais temido e experiente examinador da banca {banca} para provas de TI de alto nível.
 Sua missão é criar UMA questão de múltipla escolha INÉDITA sobre:
 Grupo: {grupo}
 Tópico: {subgrupo}
 
-O PADRÃO E A "MALDADE" DA FGV:
-1. Enunciados baseados em cenários reais: Crie uma situação-problema prática (historinha) vivenciada por um analista, arquiteto ou desenvolvedor.
+O PADRÃO E A "MALDADE" DA {banca}:
+1. Enunciados: Imite o estilo característico da banca {banca} (textos longos baseados em cenários práticos se for FGV; afirmações diretas e teóricas se for CEBRASPE; letra de lei/manual se for FCC, etc).
 2. Alternativas Capciosas: As alternativas incorretas devem ser extremamente plausíveis e trazer conceitos técnicos reais, mas aplicados de forma ligeiramente equivocada no contexto (as famosas "cascas de banana").
 3. Nível Sênior: Fuja de perguntas literais ("o que é X?"). Exija interpretação e conhecimento profundo da literatura de referência e manuais oficiais.
 
@@ -80,14 +80,15 @@ Regras de Ouro:
 {{
 "enunciado": "...",
 "alternativas": {{"A": "...", "B": "...", "C": "...", "D": "...", "E": "..."}},
-"gabarito": "..."
+"gabarito": "...",
+"banca": "{banca}"
 }}
 """
 
-def get_prompt_mentoria(enunciado: str, alternativas: dict, letra_escolhida: str = None) -> str:
-    prompt = """Você é o Motor de Inferência Analítica (Tutor IA). 
+def get_prompt_mentoria(enunciado: str, alternativas: dict, letra_escolhida: str = None, banca: str = "Geral") -> str:
+    prompt = f"""Você é o Motor de Inferência Analítica (Tutor IA), especializado na banca {banca}. 
 REGRA DE OURO INQUEBRÁVEL: VOCÊ ESTÁ ESTRITAMENTE PROIBIDO DE REVELAR O GABARITO OU QUAL É A ALTERNATIVA CORRETA.
-Seu objetivo é atuar usando o Método Socrático. Guie o raciocínio, explique a teoria, desconstrua as premissas, levante perguntas reflexivas, mas O USUÁRIO DEVE CHEGAR À CONCLUSÃO SOZINHO. Nunca termine a análise dizendo "Portanto, a alternativa correta é X".
+Seu objetivo é atuar usando o Método Socrático. Guie o raciocínio, explique a teoria, desconstrua as premissas considerando como a banca {banca} cobra o assunto, levante perguntas reflexivas, mas O USUÁRIO DEVE CHEGAR À CONCLUSÃO SOZINHO. Nunca termine a análise dizendo "Portanto, a alternativa correta é X".
 
 [QUESTÃO]
 """
