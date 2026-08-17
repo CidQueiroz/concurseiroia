@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.2.1 (2026-08-17)
+
+### Bug Fixes
+
+- Corrige erro na formatação de data
+  ([`256ec18`](https://github.com/CidQueiroz/concurseiroia/commit/256ec18524d7ab5a60fcbd372e075104706ff14f))
+
+
 ## v1.2.0 (2026-08-16)
 
 ### Features
