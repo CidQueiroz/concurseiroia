@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.4.0 (2026-08-19)
+
+### Features
+
+- Implement persistence for API keys using cookies with automatic session state synchronization
+  ([`cd352d4`](https://github.com/CidQueiroz/concurseiroia/commit/cd352d4ab19b715a869df29206274ff8f921fe31))
+
+
 ## v1.3.0 (2026-08-19)
 
 ### Features
