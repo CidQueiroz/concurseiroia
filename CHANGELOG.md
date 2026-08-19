@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.3.0 (2026-08-19)
+
+### Features
+
+- Incorporate item_nome into study content generation and UI displays to improve granularity
+  ([`bcbe0a0`](https://github.com/CidQueiroz/concurseiroia/commit/bcbe0a075b11e35c038aa528f24867f0ea79ddd8))
+
+### Refactoring
+
+- Replace local SQLite storage with session state for study content management
+  ([`93cedb7`](https://github.com/CidQueiroz/concurseiroia/commit/93cedb7ab29f30296fa719818570a06b59f21eba))
+
+
 ## v1.2.1 (2026-08-17)
 
 ### Bug Fixes
