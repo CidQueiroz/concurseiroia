@@ -104,13 +104,29 @@ st.sidebar.markdown("---")
 
 with st.sidebar.expander("⚙️ Chaves de API (Opcional)"):
     st.markdown("Insira suas chaves para usar a IA (BYOK). Se deixar em branco, o sistema tentará usar as chaves padrão.")
+    
+    cookie_controller = get_cookie_controller()
+    saved_keys = cookie_controller.get('concurso_api_keys')
+    
+    if saved_keys and isinstance(saved_keys, dict):
+        if not st.session_state.get("user_groq_key") and saved_keys.get("groq"):
+            st.session_state["user_groq_key"] = saved_keys.get("groq")
+        if not st.session_state.get("user_gemini_key") and saved_keys.get("gemini"):
+            st.session_state["user_gemini_key"] = saved_keys.get("gemini")
+            
     if "user_groq_key" not in st.session_state:
         st.session_state["user_groq_key"] = ""
     if "user_gemini_key" not in st.session_state:
         st.session_state["user_gemini_key"] = ""
         
-    st.session_state["user_groq_key"] = st.text_input("Groq API Key", type="password", value=st.session_state["user_groq_key"])
-    st.session_state["user_gemini_key"] = st.text_input("Gemini API Key", type="password", value=st.session_state["user_gemini_key"])
+    def save_keys():
+        cookie_controller.set('concurso_api_keys', {
+            "groq": st.session_state.get("user_groq_key", ""),
+            "gemini": st.session_state.get("user_gemini_key", "")
+        })
+
+    st.text_input("Groq API Key", type="password", key="user_groq_key", on_change=save_keys)
+    st.text_input("Gemini API Key", type="password", key="user_gemini_key", on_change=save_keys)
     st.markdown("<small>[Como obter chave Groq?](https://console.groq.com/keys) | [Gemini?](https://aistudio.google.com/app/apikey)</small>", unsafe_allow_html=True)
 
     opcoes_menu = ["Hoje", "Modo Prova", "Diagnóstico (IA)", "Estatísticas", "Cronograma"]
