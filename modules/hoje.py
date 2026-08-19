@@ -4,7 +4,6 @@ import json
 import time
 import os
 import datetime
-import sqlite3
 from backend.db import get_supabase
 
 def render(DB_PATH=None):
@@ -63,28 +62,18 @@ def render(DB_PATH=None):
             
             # --- FASE TEORIA ---
             if st.session_state[k_fase] == "teoria":
-                conn_estudo = sqlite3.connect("data/bancos/conteudo_estudo.sqlite")
-                cur_estudo = conn_estudo.cursor()
-                try:
-                    cur_estudo.execute("SELECT texto FROM conteudos WHERE grupo = ? AND subgrupo = ?", (grupo, subgrupo))
-                    res = cur_estudo.fetchone()
-                except:
-                    res = None
-                conn_estudo.close()
+                k_teoria = f"teoria_{grupo}_{subgrupo}"
+                res = st.session_state.get(k_teoria)
                 
-                if res and res[0]:
-                    st.markdown(res[0])
+                if res:
+                    st.markdown(res)
                 else:
                     st.info("Texto base não encontrado. Buscando via IA...")
                     if st.button("Gerar Resumo por IA", key=f"btn_gerar_teoria_{idx}"):
                         with st.spinner("Gerando conteúdo..."):
                             from backend.llm import gerar_conteudo_estudo
                             texto_gerado = gerar_conteudo_estudo(grupo, subgrupo)
-                            conn_estudo2 = sqlite3.connect("data/bancos/conteudo_estudo.sqlite")
-                            conn_estudo2.execute("CREATE TABLE IF NOT EXISTS conteudos (id INTEGER PRIMARY KEY, grupo TEXT, subgrupo TEXT, texto TEXT)")
-                            conn_estudo2.execute("INSERT INTO conteudos (grupo, subgrupo, texto) VALUES (?, ?, ?)", (grupo, subgrupo, texto_gerado))
-                            conn_estudo2.commit()
-                            conn_estudo2.close()
+                            st.session_state[k_teoria] = texto_gerado
                             st.rerun()
                 
                 if st.button("Concluir Leitura (Ir para Active Recall)", key=f"btn_ler_{idx}"):
@@ -320,16 +309,19 @@ def render(DB_PATH=None):
                     st.rerun()
                     
             elif st.session_state[k_rev_fase] == "teoria":
-                conn_estudo = sqlite3.connect("data/bancos/conteudo_estudo.sqlite")
-                cur_estudo = conn_estudo.cursor()
-                try:
-                    cur_estudo.execute("SELECT texto FROM conteudos WHERE grupo = ? AND subgrupo = ?", (grupo, subgrupo))
-                    res = cur_estudo.fetchone()
-                except:
-                    res = None
-                conn_estudo.close()
-                if res and res[0]:
-                    st.markdown(res[0])
+                k_teoria = f"teoria_{grupo}_{subgrupo}"
+                res = st.session_state.get(k_teoria)
+                
+                if res:
+                    st.markdown(res)
+                else:
+                    st.info("Texto base não encontrado na sessão atual. Buscando via IA...")
+                    if st.button("Gerar Resumo por IA", key=f"btn_gerar_teoria_rev_{idx}"):
+                        with st.spinner("Gerando conteúdo..."):
+                            from backend.llm import gerar_conteudo_estudo
+                            texto_gerado = gerar_conteudo_estudo(grupo, subgrupo)
+                            st.session_state[k_teoria] = texto_gerado
+                            st.rerun()
                 if st.button("Concluir Revisão Teórica", key=f"btn_fim_teoria_{idx}"):
                     st.session_state[k_rev_fase] = "questoes"
                     st.rerun()
