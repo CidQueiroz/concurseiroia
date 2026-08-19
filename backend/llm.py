@@ -171,9 +171,9 @@ def explicar_erro(enunciado, alternativa_correta, alternativa_marcada, acertou=F
             return err_gen()
         return msg
 
-def gerar_conteudo_estudo(grupo, subgrupo):
+def gerar_conteudo_estudo(grupo, subgrupo, item_nome):
     from backend.prompts.tutor import get_prompt_estudo
-    prompt = get_prompt_estudo(grupo, subgrupo)
+    prompt = get_prompt_estudo(grupo, subgrupo, item_nome)
     
     pool = get_llm_pool(temperature=0.5)
     

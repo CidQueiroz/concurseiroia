@@ -49,11 +49,12 @@ def render(DB_PATH=None):
     
     for item in lista_novos:
         grupo = item['grupo_nome']
-        subgrupo = item['item_nome']
+        subgrupo = item['subgrupo_nome']
+        item_nome = item['item_nome']
         iid = item['item_id']
         idx = f"novo_{iid}"
         
-        with st.expander(f"🆕 [NOVO] {grupo} - {subgrupo}", expanded=False):
+        with st.expander(f"🆕 [NOVO] {grupo} - {subgrupo} - {item_nome}", expanded=False):
             st.markdown(f"**Status Atual:** {item['status']}")
             
             k_fase = f"fase_{idx}"
@@ -62,7 +63,7 @@ def render(DB_PATH=None):
             
             # --- FASE TEORIA ---
             if st.session_state[k_fase] == "teoria":
-                k_teoria = f"teoria_{grupo}_{subgrupo}"
+                k_teoria = f"teoria_{grupo}_{subgrupo}_{item_nome}"
                 res = st.session_state.get(k_teoria)
                 
                 if res:
@@ -72,7 +73,7 @@ def render(DB_PATH=None):
                     if st.button("Gerar Resumo por IA", key=f"btn_gerar_teoria_{idx}"):
                         with st.spinner("Gerando conteúdo..."):
                             from backend.llm import gerar_conteudo_estudo
-                            texto_gerado = gerar_conteudo_estudo(grupo, subgrupo)
+                            texto_gerado = gerar_conteudo_estudo(grupo, subgrupo, item_nome)
                             st.session_state[k_teoria] = texto_gerado
                             st.rerun()
                 
@@ -282,11 +283,12 @@ def render(DB_PATH=None):
         
     for item in lista_revs:
         grupo = item['grupo_nome']
-        subgrupo = item['item_nome']
+        subgrupo = item['subgrupo_nome']
+        item_nome = item['item_nome']
         iid = item['item_id']
         idx = f"rev_{iid}"
         
-        with st.expander(f"🔄 [REVISAR] {grupo} - {subgrupo}", expanded=False):
+        with st.expander(f"🔄 [REVISAR] {grupo} - {subgrupo} - {item_nome}", expanded=False):
             st.markdown(f"**Status:** {item['status']} | **Prioridade:** {item.get('prioridade', 0):.1f} | **Nível de Domínio:** {item.get('nivel_dominio', 0)}%")
             
             k_rev_fase = f"rev_fase_{idx}"
@@ -309,7 +311,7 @@ def render(DB_PATH=None):
                     st.rerun()
                     
             elif st.session_state[k_rev_fase] == "teoria":
-                k_teoria = f"teoria_{grupo}_{subgrupo}"
+                k_teoria = f"teoria_{grupo}_{subgrupo}_{item_nome}"
                 res = st.session_state.get(k_teoria)
                 
                 if res:
@@ -319,7 +321,7 @@ def render(DB_PATH=None):
                     if st.button("Gerar Resumo por IA", key=f"btn_gerar_teoria_rev_{idx}"):
                         with st.spinner("Gerando conteúdo..."):
                             from backend.llm import gerar_conteudo_estudo
-                            texto_gerado = gerar_conteudo_estudo(grupo, subgrupo)
+                            texto_gerado = gerar_conteudo_estudo(grupo, subgrupo, item_nome)
                             st.session_state[k_teoria] = texto_gerado
                             st.rerun()
                 if st.button("Concluir Revisão Teórica", key=f"btn_fim_teoria_{idx}"):

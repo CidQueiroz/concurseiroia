@@ -47,11 +47,12 @@ Responda OBRIGATORIAMENTE seguindo o exato formato Markdown abaixo:
 """
     return prompt
 
-def get_prompt_estudo(grupo: str, subgrupo: str) -> str:
+def get_prompt_estudo(grupo: str, subgrupo: str, item_nome: str) -> str:
     return f"""Você é um professor experiente de concursos de TI.
 Crie um resumo de revisão focado para provas de concurso sobre o seguinte tópico do edital:
-Grupo: {grupo}
+Módulo: {grupo}
 Tópico: {subgrupo}
+Subtópico Específico: {item_nome}
 
 O resumo deve conter:
 1. Conceitos principais (direto ao ponto)
