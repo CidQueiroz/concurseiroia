@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎯 Concurseiro IA
+# 🎯 AprovaTeck
 ### Plataforma de Estudos Inteligente para maximizar seu desempenho.
 
 ![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -15,7 +15,7 @@
 
 ## 🚀 Visão Geral
 
-O **Concurseiro IA** é uma Plataforma de Estudos Inteligente desenvolvida para auxiliar concurseiros em sua jornada de preparação. A aplicação utiliza inteligência artificial para fornecer diagnósticos precisos, simulados adaptativos, estatísticas de desempenho e gerenciamento eficiente do cronograma de estudos.
+O **AprovaTeck** é uma Plataforma de Estudos Inteligente desenvolvida para auxiliar concurseiros em sua jornada de preparação. A aplicação utiliza inteligência artificial para fornecer diagnósticos precisos, simulados adaptativos, estatísticas de desempenho e gerenciamento eficiente do cronograma de estudos.
 
 O grande diferencial é transformar o estudo tradicional em um ecossistema orientado a dados, permitindo que o aluno acompanhe sua evolução de perto e identifique automaticamente pontos de melhoria com o auxílio de IA.
 
@@ -29,10 +29,10 @@ A aplicação é construída de forma modular, com o frontend renderizado via St
 graph TD
     subgraph "Usuário"
         direction LR
-        Student(Concurseiro)
+        Student(Concurseiro / Estudante)
     end
 
-    subgraph "Aplicação Concurseiro IA"
+    subgraph "Aplicação AprovaTeck"
         App(Frontend: Streamlit)
         
         subgraph "Módulos"
@@ -96,8 +96,8 @@ Siga os passos abaixo para configurar e rodar o ambiente de desenvolvimento loca
 
 ### 1. Clonar o Repositório
 ```bash
-git clone https://github.com/CidQueiroz/concurseiroia.git
-cd concurseiroia
+git clone https://github.com/CidQueiroz/AprovaTeck.git
+cd AprovaTeck
 ```
 
 ### 2. Configurar o Ambiente Virtual
@@ -118,7 +118,10 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Crie um arquivo `.env` na raiz do projeto contendo as chaves necessárias (ex: `SUPABASE_URL`, `SUPABASE_KEY`).
+Copie o arquivo modelo `.env.example` para `.env` na raiz do projeto e preencha suas chaves (ex: `SUPABASE_URL`, `SUPABASE_KEY`):
+```bash
+cp .env.example .env
+```
 
 ### 4. Executar a Aplicação
 
@@ -133,7 +136,7 @@ streamlit run app.py
 
 ## 🤖 Uso de IA e Chaves de API (BYOK)
 
-O **Concurseiro IA** permite que você traga sua própria chave de API (Bring Your Own Key) para utilizar as funcionalidades de IA generativa.
+O **AprovaTeck** permite que você traga sua própria chave de API (Bring Your Own Key) para utilizar as funcionalidades de IA generativa.
 No menu lateral, em **"⚙️ Chaves de API"**, você pode inserir suas próprias chaves para os provedores:
 *   **Groq API Key:** Modelos rápidos e ultra-eficientes.
 *   **Gemini API Key:** Modelos robustos do ecossistema Google.

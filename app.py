@@ -3,7 +3,7 @@ import streamlit as st
 from backend.db import get_supabase
 
 # Configuração da página e inicialização
-st.set_page_config(page_title="Concurseiro IA", layout="wide")
+st.set_page_config(page_title="AprovaTeck - Plataforma de Estudos Inteligente", layout="wide")
 supabase = get_supabase()
 
 import os
@@ -18,7 +18,7 @@ if "user" not in st.session_state:
 # Tenta carregar o cookie de sessão para auto-login se não estiver logado na memória
 if st.session_state["user"] is None:
     cookie_controller = get_cookie_controller()
-    creds = cookie_controller.get('concurso_session')
+    creds = cookie_controller.get('aprovateck_session')
     if creds and isinstance(creds, dict) and creds.get("email") and creds.get("password"):
         try:
             res = supabase.auth.sign_in_with_password({"email": creds["email"], "password": creds["password"]})
@@ -27,7 +27,7 @@ if st.session_state["user"] is None:
             pass
 
 def render_login():
-    st.title("Concurseiro IA 🎯")
+    st.title("AprovaTeck 🎯")
     st.subheader("Plataforma de Estudos Inteligente")
     
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -43,7 +43,7 @@ def render_login():
                         res = supabase.auth.sign_in_with_password({"email": email, "password": senha})
                         st.session_state["user"] = res.user
                         cookie_controller = get_cookie_controller()
-                        cookie_controller.set('concurso_session', {"email": email, "password": senha})
+                        cookie_controller.set('aprovateck_session', {"email": email, "password": senha})
                         st.rerun()
                     except Exception as e:
                         st.error(f"Erro no login. Verifique suas credenciais. Detalhes: {e}")
@@ -72,7 +72,7 @@ from modules import hoje, modo_prova, estatisticas, gerenciador, cronograma, dia
 # Variável de compatibilidade para os módulos que ainda não foram refatorados
 DB_PATH = "data/bancos/db_novo.sqlite"
 
-st.sidebar.title("Concurseiro IA 🎯")
+st.sidebar.title("AprovaTeck 🎯")
 st.sidebar.markdown(f"👤 **Logado:** {st.session_state['user'].email.split('@')[0]}")
 
 bancas_disponiveis = ["CEBRASPE", "CESGRANRIO", "FCC", "FGV", "IBFC", "VUNESP", "Geral", "Outra..."]
@@ -97,7 +97,7 @@ if st.sidebar.button("🚪 Sair da Conta", use_container_width=True):
     supabase.auth.sign_out()
     st.session_state["user"] = None
     cookie_controller = get_cookie_controller()
-    cookie_controller.remove('concurso_session')
+    cookie_controller.remove('aprovateck_session')
     st.rerun()
 
 st.sidebar.markdown("---")
@@ -106,7 +106,7 @@ with st.sidebar.expander("⚙️ Chaves de API (Opcional)"):
     st.markdown("Insira suas chaves para usar a IA (BYOK). Se deixar em branco, o sistema tentará usar as chaves padrão.")
     
     cookie_controller = get_cookie_controller()
-    saved_keys = cookie_controller.get('concurso_api_keys')
+    saved_keys = cookie_controller.get('aprovateck_api_keys')
     
     if saved_keys and isinstance(saved_keys, dict):
         if not st.session_state.get("user_groq_key") and saved_keys.get("groq"):
@@ -120,7 +120,7 @@ with st.sidebar.expander("⚙️ Chaves de API (Opcional)"):
         st.session_state["user_gemini_key"] = ""
         
     def save_keys():
-        cookie_controller.set('concurso_api_keys', {
+        cookie_controller.set('aprovateck_api_keys', {
             "groq": st.session_state.get("user_groq_key", ""),
             "gemini": st.session_state.get("user_gemini_key", "")
         })

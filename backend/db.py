@@ -23,7 +23,7 @@ def get_supabase() -> Client:
     if "user" in st.session_state and st.session_state["user"] is not None:
         from modules.cookies import get_cookie_controller
         cookie_controller = get_cookie_controller()
-        creds = cookie_controller.get('concurso_session')
+        creds = cookie_controller.get('aprovateck_session')
         if creds and isinstance(creds, dict) and creds.get("email") and creds.get("password"):
             try:
                 client.auth.sign_in_with_password({"email": creds["email"], "password": creds["password"]})
