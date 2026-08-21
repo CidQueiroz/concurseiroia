@@ -12,7 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@cidqueiroz/cdkteck-ui": "^2.16.0",
+    "@cidqueiroz/cdkteck-ui": "^2.18.0",
     "@supabase/supabase-js": "^2.49.1",
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",
