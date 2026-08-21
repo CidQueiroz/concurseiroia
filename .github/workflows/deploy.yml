@@ -24,9 +24,9 @@ jobs:
       - name: 📦 Instalar Dependências do Frontend
         run: |
           cd frontend
-          npm ci || npm install
+          npm install --legacy-peer-deps
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.PAT_GITHUB || secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN || secrets.PAT_GITHUB || secrets.GITHUB_TOKEN }}
 
       - name: 🧪 Executar Testes Unitários (Vitest)
         run: |
