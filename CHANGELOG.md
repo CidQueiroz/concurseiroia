@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.5.1 (2026-08-21)
+
+### Bug Fixes
+
+- **ci**: Inject supabase env vars in vitest runner step
+  ([`0cc8386`](https://github.com/CidQueiroz/AprovaTeck/commit/0cc8386d2e13371b7a1d435636032985101292c1))
+
+
 ## v1.5.0 (2026-08-21)
 
 ### Features
