@@ -21,14 +21,16 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@cidqueiroz'
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.PAT_GITHUB || secrets.NODE_AUTH_TOKEN || secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN || secrets.PAT_GITHUB || secrets.GITHUB_TOKEN }}
 
       - name: 📦 Instalar Dependências do Frontend
         run: |
           cd frontend
+          echo "@cidqueiroz:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> .npmrc
           npm install --legacy-peer-deps
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.PAT_GITHUB || secrets.NODE_AUTH_TOKEN || secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN || secrets.PAT_GITHUB || secrets.GITHUB_TOKEN }}
 
       - name: 🧪 Executar Testes Unitários (Vitest)
         run: |
