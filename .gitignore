@@ -26,3 +26,10 @@ data/questoes/*
 data/resumos/*
 data/cooldowns.json
 data/raw
+
+# Firebase & Local Cache
+.firebase/
+
+# Front-End Build & Dependências
+frontend/node_modules/
+frontend/dist/
