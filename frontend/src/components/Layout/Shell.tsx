@@ -135,7 +135,7 @@ export const Shell: React.FC = () => {
         userBadge={userPlanBadge}
         navItems={navItems}
         activePath={location.pathname}
-        onNavigate={(path) => navigate(path)}
+        onNavigate={(path: string) => navigate(path)}
         onLogout={handleLogout}
         headerCenterContent={
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
