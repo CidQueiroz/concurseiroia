@@ -1,4 +1,4 @@
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 import streamlit as st
 from backend.db import get_supabase
 

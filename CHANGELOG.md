@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.5.0 (2026-08-21)
+
+### Features
+
+- **ci**: Configure automated firebase hosting deployment pipeline
+  ([`262d00b`](https://github.com/CidQueiroz/AprovaTeck/commit/262d00b7dbcd257a504f4b35b5c0d39aa9d0439c))
+
+### Refactoring
+
+- Migracao de marca e padronizacao para AprovaTeck
+  ([`d33c4d1`](https://github.com/CidQueiroz/AprovaTeck/commit/d33c4d1763f1d60fa14af49356ab087b6fe86c4b))
+
+
 ## v1.4.0 (2026-08-19)
 
 ### Features
